@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 from aqt import gui_hooks, mw
+from aqt.qt import QAction, qconnect
 
 from .config_manager import initialize_config
 from .consts import MODULE_ADDON
@@ -17,6 +18,12 @@ from .reviewer import initialize_reviewer
 from .stats.dialog import initialize_stats
 
 _initialized = False
+
+
+def _add_tools_menu() -> None:
+    action = QAction("Speedup options…")
+    qconnect(action.triggered, show_options_dialog)
+    mw.form.menuTools.addAction(action)
 
 
 def initialize_addon() -> None:
@@ -29,6 +36,7 @@ def initialize_addon() -> None:
     initialize_deck_options()
     initialize_reviewer()
     initialize_stats()
+    _add_tools_menu()
 
     _initialized = True
 

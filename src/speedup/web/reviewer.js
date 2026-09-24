@@ -1,5 +1,5 @@
 /*
- * Speedup - reviewer bottom-bar UI.
+ * Speedup - reviewer overlay UI.
  * Derived from Speed Focus Mode (AGPL-3.0-or-later).
  */
 
@@ -28,9 +28,22 @@
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
     if (hours > 0) {
-      return hours + ":" + String(minutes).padStart(2, "0") + ":" + String(seconds).padStart(2, "0");
+      return (
+        hours +
+        ":" +
+        String(minutes).padStart(2, "0") +
+        ":" +
+        String(seconds).padStart(2, "0")
+      );
     }
     return minutes + ":" + String(seconds).padStart(2, "0");
+  }
+
+  function chip() {
+    return (
+      "display:inline-block;padding:1px 6px;margin-top:2px;border-radius:4px;" +
+      "background:rgba(128,128,128,0.18);font-size:12px;line-height:1.5;"
+    );
   }
 
   function timeNode() {
@@ -101,23 +114,44 @@
   }
 
   function build() {
-    if (document.getElementById("speedupControls")) {
+    if (document.getElementById("speedupOverlay")) {
       return;
     }
-    const middle = document.getElementById("middle");
-    if (!middle) {
-      return;
-    }
+    const overlay = document.createElement("div");
+    overlay.id = "speedupOverlay";
+    overlay.setAttribute(
+      "style",
+      "position:fixed;top:10px;right:14px;z-index:99999;text-align:right;" +
+        "pointer-events:none;max-width:40vw;"
+    );
+
     const hotkey = window.speedupHotkey || "";
-    const title = hotkey ? "Shortcut key: " + hotkey : "";
-    const html =
-      '<td id="speedupControls" width="80" align="center" valign="top" class="stat">' +
-      '<button id="speedupMoreTime" title="' + title + '" ' +
-      "onclick=\"pycmd('speedup:moreTime');\">More time!</button>" +
-      '<div id="speedupTime" class="stattxt"></div>' +
-      '<div id="speedupStats" class="stattxt"></div>' +
-      "</td>";
-    middle.insertAdjacentHTML("afterend", html);
+    const button = document.createElement("button");
+    button.id = "speedupMoreTime";
+    button.textContent = "More time!";
+    if (hotkey) {
+      button.title = "Shortcut key: " + hotkey;
+    }
+    button.setAttribute(
+      "style",
+      "pointer-events:auto;display:none;margin-bottom:2px;"
+    );
+    button.addEventListener("click", function () {
+      pycmd("speedup:moreTime");
+    });
+
+    const time = document.createElement("div");
+    time.id = "speedupTime";
+    time.setAttribute("style", chip());
+
+    const stats = document.createElement("div");
+    stats.id = "speedupStats";
+    stats.setAttribute("style", chip());
+
+    overlay.appendChild(button);
+    overlay.appendChild(time);
+    overlay.appendChild(stats);
+    document.body.appendChild(overlay);
   }
 
   window.speedupBuild = build;

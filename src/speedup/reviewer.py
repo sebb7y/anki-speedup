@@ -15,7 +15,7 @@ from typing import Any, Callable
 
 from anki.cards import Card
 from aqt import gui_hooks, mw
-from aqt.reviewer import Reviewer, ReviewerBottomBar
+from aqt.reviewer import Reviewer
 from aqt.sound import av_player
 from aqt.utils import tooltip
 
@@ -83,10 +83,10 @@ def _eval(js: str) -> None:
     reviewer = mw.reviewer
     if reviewer is None:
         return
-    bottom = getattr(reviewer, "bottom", None)
-    if bottom is None or bottom.web is None:
+    web = getattr(reviewer, "web", None)
+    if web is None:
         return
-    bottom.web.eval(js)
+    web.eval(js)
 
 
 def _push_next_countdown() -> None:
@@ -233,6 +233,7 @@ def _start_question(card: Card) -> None:
     _session.phase = "question"
     _session.phase_start = time.monotonic()
 
+    _eval("if (window.speedupBuild) speedupBuild();")
     _push_stats(_session.deck_id, card)
 
     if not has_any_timer(settings):
@@ -356,7 +357,7 @@ def _on_js_message(
 
 def _on_webview_will_set_content(web_content: Any, context: Any) -> None:
     hotkey = get_config().get("moreTime", {}).get("hotkey", "p")
-    if isinstance(context, ReviewerBottomBar):
+    if isinstance(context, Reviewer):
         web_content.body += (
             f"<script>window.speedupHotkey = {json.dumps(hotkey)};"
             "window.speedupSetIdle = window.speedupSetIdle || function(){};"
@@ -365,9 +366,6 @@ def _on_webview_will_set_content(web_content: Any, context: Any) -> None:
             "window.speedupSetMoreTimeVisible = window.speedupSetMoreTimeVisible || function(){};"
             "</script>"
             f'<script src="/_addons/{MODULE_ADDON}/web/reviewer.js"></script>'
-        )
-    elif isinstance(context, Reviewer):
-        web_content.body += (
             f'<script src="/_addons/{MODULE_ADDON}/web/reviewer_card.js"></script>'
         )
 
