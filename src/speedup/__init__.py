@@ -1,0 +1,30 @@
+# Speedup - an Anki add-on derived from Speed Focus Mode
+# Copyright (C) 2026 Speedup contributors
+# Based on Speed Focus Mode, Copyright (C) 2017-2022 Aristotelis P. (Glutanimate)
+# License: GNU AGPL v3 or later (see LICENSE)
+
+"""Module-level entry point for Speedup."""
+
+from __future__ import annotations
+
+from aqt import gui_hooks, mw
+
+from .config_manager import initialize_config
+from .consts import MODULE_ADDON
+from .options_dialog import show_options_dialog
+
+_initialized = False
+
+
+def initialize_addon() -> None:
+    global _initialized
+    if _initialized:
+        return
+
+    initialize_config()
+    mw.addonManager.setConfigAction(MODULE_ADDON, show_options_dialog)
+
+    _initialized = True
+
+
+gui_hooks.profile_did_open.append(initialize_addon)

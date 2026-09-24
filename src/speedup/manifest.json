@@ -1,0 +1,8 @@
+{
+    "package": "speedup",
+    "name": "Speedup",
+    "mod": 0,
+    "conflicts": [],
+    "min_point_version": 240000,
+    "max_point_version": 0
+}

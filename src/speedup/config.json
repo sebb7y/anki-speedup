@@ -1,0 +1,79 @@
+{
+    "enabled": true,
+    "moreTime": {
+        "showButton": true,
+        "hotkey": "p"
+    },
+    "stopTimersWhenTyping": true,
+    "suppressBuiltInAutoAdvance": true,
+    "alertSound": "default",
+    "grouping": {
+        "collapseNewLearning": false,
+        "collapseReviewRelearning": false
+    },
+    "defaults": {
+        "new": {
+            "question": {
+                "alertAfter": 0.0,
+                "revealAfter": 0.0,
+                "autoAction": { "after": 0.0, "action": "again", "skipAnswer": false }
+            },
+            "answer": {
+                "alertAfter": 0.0,
+                "autoAction": { "after": 0.0, "action": "good" }
+            }
+        },
+        "learning": {
+            "question": {
+                "alertAfter": 0.0,
+                "revealAfter": 0.0,
+                "autoAction": { "after": 0.0, "action": "again", "skipAnswer": false }
+            },
+            "answer": {
+                "alertAfter": 0.0,
+                "autoAction": { "after": 0.0, "action": "good" }
+            }
+        },
+        "review": {
+            "question": {
+                "alertAfter": 0.0,
+                "revealAfter": 0.0,
+                "autoAction": { "after": 0.0, "action": "again", "skipAnswer": false }
+            },
+            "answer": {
+                "alertAfter": 0.0,
+                "autoAction": { "after": 0.0, "action": "good" }
+            }
+        },
+        "relearning": {
+            "question": {
+                "alertAfter": 0.0,
+                "revealAfter": 0.0,
+                "autoAction": { "after": 0.0, "action": "again", "skipAnswer": false }
+            },
+            "answer": {
+                "alertAfter": 0.0,
+                "autoAction": { "after": 0.0, "action": "good" }
+            }
+        }
+    },
+    "ui": {
+        "showCountdown": true,
+        "showAverage": false,
+        "showDeckTotal": false,
+        "showOverallTotal": false,
+        "totalPeriod": "today"
+    },
+    "analytics": {
+        "enabled": false,
+        "markSlowFast": false,
+        "slowPercentile": 75,
+        "fastPercentile": 25
+    },
+    "adaptive": {
+        "enabled": false,
+        "factor": 0.97,
+        "windowDays": 30,
+        "floor": 1.0
+    }
+}
