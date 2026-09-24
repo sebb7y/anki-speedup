@@ -177,7 +177,7 @@ class SpeedupOptionsDialog(QDialog):
 
         self.show_more_time = QCheckBox('Show the "More time" button and countdown')
         self.show_more_time.setChecked(
-            bool(config.get("moreTime", {}).get("showButton", True))
+            bool(config.get("moreTime", {}).get("showButton", False))
         )
 
         self.hotkey = QKeySequenceEdit(

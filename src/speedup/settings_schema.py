@@ -62,7 +62,7 @@ def default_class_settings() -> dict[str, Any]:
 def default_global_settings() -> dict[str, Any]:
     return {
         "enabled": True,
-        "moreTime": {"showButton": True, "hotkey": "p"},
+        "moreTime": {"showButton": False, "hotkey": "p"},
         "stopTimersWhenTyping": True,
         "suppressBuiltInAutoAdvance": True,
         "alertSound": "default",

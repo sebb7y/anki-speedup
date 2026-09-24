@@ -243,7 +243,7 @@ def _start_question(card: Card) -> None:
     if config.get("suppressBuiltInAutoAdvance", True) and mw.reviewer is not None:
         mw.reviewer.auto_advance_enabled = False
 
-    show_more = bool(config.get("moreTime", {}).get("showButton", True))
+    show_more = bool(config.get("moreTime", {}).get("showButton", False))
     _eval(f"speedupSetMoreTimeVisible({'true' if show_more else 'false'});")
 
     question = settings.get("question", {})

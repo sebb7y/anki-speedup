@@ -113,8 +113,8 @@
     const html =
       '<td id="speedupControls" width="80" align="center" valign="top" class="stat">' +
       '<button id="speedupMoreTime" title="' + title + '" ' +
-      "onclick=\"pycmd('speedup:moreTime');\">" +
-      "More time!<br><span id=\"speedupTime\" class=\"stattxt\"></span></button>" +
+      "onclick=\"pycmd('speedup:moreTime');\">More time!</button>" +
+      '<div id="speedupTime" class="stattxt"></div>' +
       '<div id="speedupStats" class="stattxt"></div>' +
       "</td>";
     middle.insertAdjacentHTML("afterend", html);

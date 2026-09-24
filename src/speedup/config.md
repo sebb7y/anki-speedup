@@ -16,7 +16,7 @@ Timings are in seconds and may be fractional, e.g. `2.7`.
 ### `moreTime.showButton`
 
 (true/false): Show the "More time" button and countdown in the reviewer.
-Default: `true`.
+Default: `false`.
 
 ### `moreTime.hotkey`
 

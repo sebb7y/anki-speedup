@@ -1,7 +1,7 @@
 {
     "enabled": true,
     "moreTime": {
-        "showButton": true,
+        "showButton": false,
         "hotkey": "p"
     },
     "stopTimersWhenTyping": true,
