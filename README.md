@@ -1,4 +1,7 @@
-# Speedup
+# Anki Speedup
+
+## Warning: WIP & Still very buggy
+
 
 A modern reimplementation of [Speed Focus Mode](https://github.com/glutanimate/speed-focus-mode)
 for current Anki versions (built against Anki 26.09).
