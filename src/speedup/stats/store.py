@@ -17,7 +17,7 @@ import sqlite3
 import time
 from typing import Any
 
-from .consts import PATH_USERFILES
+from ..consts import PATH_USERFILES
 
 _DB_PATH = os.path.join(PATH_USERFILES, "speedup.db")
 
@@ -114,6 +114,27 @@ def card_totals(did: int, days: int | None = None) -> dict[int, int]:
             (int(did), _since(days)),
         ).fetchall()
     return {int(row["cid"]): int(row["total"] or 0) for row in rows}
+
+
+def card_stats(did: int, days: int | None = None) -> list[dict[str, Any]]:
+    """Per-card average front/back/total times for a deck."""
+    with _connect() as connection:
+        rows = connection.execute(
+            "SELECT cid, AVG(front_ms) AS front, AVG(back_ms) AS back,"
+            " AVG(total_ms) AS total, COUNT(*) AS n FROM card_times"
+            " WHERE did = ? AND ts >= ? GROUP BY cid ORDER BY total DESC",
+            (int(did), _since(days)),
+        ).fetchall()
+    return [
+        {
+            "cid": int(row["cid"]),
+            "front": int(row["front"] or 0),
+            "back": int(row["back"] or 0),
+            "total": int(row["total"] or 0),
+            "count": int(row["n"] or 0),
+        }
+        for row in rows
+    ]
 
 
 def distribution(did: int, days: int | None = None) -> dict[str, list[int]]:

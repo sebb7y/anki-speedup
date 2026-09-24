@@ -14,6 +14,7 @@ from .consts import MODULE_ADDON
 from .deck_options import initialize_deck_options
 from .options_dialog import show_options_dialog
 from .reviewer import initialize_reviewer
+from .stats.dialog import initialize_stats
 
 _initialized = False
 
@@ -27,6 +28,7 @@ def initialize_addon() -> None:
     mw.addonManager.setConfigAction(MODULE_ADDON, show_options_dialog)
     initialize_deck_options()
     initialize_reviewer()
+    initialize_stats()
 
     _initialized = True
 

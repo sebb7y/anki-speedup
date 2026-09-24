@@ -67,6 +67,8 @@ class _Session:
 
 _session = _Session()
 
+_percentile_cache: dict[int, tuple[float | None, float | None]] = {}
+
 
 def _alert_path() -> str:
     name = str(get_config().get("alertSound", "default") or "default")
@@ -117,8 +119,25 @@ def _cancel_timers(idle_text: str = "") -> None:
     _eval(f"speedupSetIdle({json.dumps(idle_text)});")
 
 
-def _push_stats(deck_id: int) -> None:
-    ui = get_config().get("ui", {})
+def _deck_thresholds(
+    deck_id: int, days: int, slow_percentile: float, fast_percentile: float
+) -> tuple[float | None, float | None]:
+    cached = _percentile_cache.get(deck_id)
+    if cached is not None:
+        return cached
+    averages = queries.card_average_map(deck_id, days=days)
+    values = [value for value in averages.values() if value]
+    slow = queries.percentile(values, slow_percentile / 100.0) if values else None
+    fast = queries.percentile(values, fast_percentile / 100.0) if values else None
+    result = (slow, fast)
+    _percentile_cache[deck_id] = result
+    return result
+
+
+def _push_stats(deck_id: int, card: Card | None = None) -> None:
+    config = get_config()
+    ui = config.get("ui", {})
+    analytics = config.get("analytics", {})
     period = ui.get("totalPeriod", "today")
     stats: dict[str, Any] = {
         "average": None,
@@ -134,6 +153,20 @@ def _push_stats(deck_id: int) -> None:
         stats["deckTotal"] = queries.deck_total_ms(deck_id, period=period) / 1000.0
     if ui.get("showOverallTotal"):
         stats["overallTotal"] = queries.overall_total_ms(period=period) / 1000.0
+    if analytics.get("enabled") and analytics.get("markSlowFast") and card is not None:
+        averages = store.card_averages(int(card.id), 30)
+        if averages:
+            total = averages[0] + averages[1]
+            slow, fast = _deck_thresholds(
+                deck_id,
+                30,
+                float(analytics.get("slowPercentile", 75)),
+                float(analytics.get("fastPercentile", 25)),
+            )
+            if slow is not None and total >= slow:
+                stats["badge"] = "slow"
+            elif fast is not None and total <= fast:
+                stats["badge"] = "fast"
     _eval(f"speedupSetStats({json.dumps(stats)});")
 
 
@@ -200,7 +233,7 @@ def _start_question(card: Card) -> None:
     _session.phase = "question"
     _session.phase_start = time.monotonic()
 
-    _push_stats(_session.deck_id)
+    _push_stats(_session.deck_id, card)
 
     if not has_any_timer(settings):
         _eval("speedupSetMoreTimeVisible(false);")

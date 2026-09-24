@@ -22,3 +22,6 @@ venv/
 # Build output
 dist/
 
+# Local add-on data
+src/speedup/user_files/speedup.db
+

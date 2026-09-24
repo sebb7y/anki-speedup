@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        padding: 1rem;
+        color: var(--fg, #222);
+        background: var(--bg, #fff);
+      }
+      h1 { font-size: 1.3rem; }
+      h2 { font-size: 1.05rem; margin-top: 1.5rem; }
+      .summary { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+      .summary .item { background: rgba(127, 127, 127, 0.12); padding: 0.5rem 0.8rem; border-radius: 6px; }
+      .muted { opacity: 0.7; }
+      svg { width: 100%; max-width: 640px; height: 220px; }
+      .bar { fill: #4c8bf5; }
+      .bar.back { fill: #f5a623; }
+      table { border-collapse: collapse; width: 100%; max-width: 720px; margin-top: 0.5rem; }
+      th, td { text-align: left; padding: 0.25rem 0.6rem; border-bottom: 1px solid rgba(127, 127, 127, 0.25); }
+      button { padding: 0.4rem 0.8rem; border-radius: 6px; border: 1px solid #4c8bf5; background: #4c8bf5; color: #fff; cursor: pointer; }
+      .badge { padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.8rem; }
+      .badge.slow { background: #f8d7da; color: #842029; }
+      .badge.fast { background: #d1e7dd; color: #0f5132; }
+    </style>
+  </head>
+  <body>
+    <div id="speedup-stats">
+      <h1 id="deck-name"></h1>
+      <div id="summary" class="summary"></div>
+      <div id="recommend" style="margin-top: 1rem"></div>
+      <h2>Card speed distribution</h2>
+      <svg id="chart-cards"></svg>
+      <h2>Answer time distribution (front vs back)</h2>
+      <svg id="chart-answers"></svg>
+      <h2>Slowest cards</h2>
+      <table id="cards"></table>
+    </div>
+    <script type="application/json" id="speedup-data">__DATA__</script>
+    <script src="/_addons/speedup/web/charts.js"></script>
+  </body>
+</html>

@@ -16,6 +16,7 @@ from aqt.qt import QAction, QMenu, qconnect
 
 from .config_manager import get_config
 from .consts import PATH_WEB
+from .stats.dialog import show_stats_for_deck
 
 _WEB = Path(PATH_WEB)
 
@@ -35,9 +36,13 @@ def on_deck_options_did_load(dialog: DeckOptionsDialog) -> None:
 
 
 def on_deck_browser_will_show_options_menu(menu: QMenu, deck_id: int) -> None:
-    action = QAction("Speedup options…", menu)
-    qconnect(action.triggered, lambda: display_options_for_deck_id(deck_id))
-    menu.addAction(action)
+    options_action = QAction("Speedup options…", menu)
+    qconnect(options_action.triggered, lambda: display_options_for_deck_id(deck_id))
+    menu.addAction(options_action)
+
+    stats_action = QAction("Speedup statistics…", menu)
+    qconnect(stats_action.triggered, lambda: show_stats_for_deck(deck_id))
+    menu.addAction(stats_action)
 
 
 def initialize_deck_options() -> None:
