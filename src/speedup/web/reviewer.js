@@ -94,9 +94,9 @@
   }
 
   function setMoreTimeVisible(visible) {
-    const controls = document.getElementById("speedupControls");
-    if (controls) {
-      controls.style.display = visible ? "" : "none";
+    const button = document.getElementById("speedupMoreTime");
+    if (button) {
+      button.style.display = visible ? "" : "none";
     }
   }
 
