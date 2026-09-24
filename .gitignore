@@ -23,5 +23,6 @@ venv/
 dist/
 
 # Local add-on data
+src/speedup/meta.json
 src/speedup/user_files/speedup.db
 

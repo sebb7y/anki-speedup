@@ -14,6 +14,7 @@ OUTPUT = DIST / "speedup.ankiaddon"
 
 SKIP_SUFFIXES = (".pyc",)
 SKIP_DIRS = {"__pycache__"}
+SKIP_NAMES = {"meta.json", "speedup.db"}
 
 
 def validate() -> None:
@@ -34,6 +35,8 @@ def build() -> Path:
             if any(part in SKIP_DIRS for part in path.parts):
                 continue
             if path.suffix in SKIP_SUFFIXES:
+                continue
+            if path.name in SKIP_NAMES:
                 continue
             if path.is_file():
                 archive.write(path, path.relative_to(SRC))
