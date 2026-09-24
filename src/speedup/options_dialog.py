@@ -29,12 +29,12 @@ from aqt.qt import (
     QWidget,
     qconnect,
 )
-from aqt.utils import disable_help_button, restoreGeom, saveGeom, tr
+from aqt.utils import disable_help_button, restoreGeom, saveGeom
 
 from .config_manager import get_config, save_config
 from .settings_schema import (
-    ACTIONS,
     ACTION_LABELS,
+    ACTIONS,
     CARD_CLASSES,
     default_global_settings,
 )
@@ -66,16 +66,14 @@ def _action_combo() -> QComboBox:
 
 
 class _PhaseGroup(QGroupBox):
-    def __init__(self, title: str, *, show_reveal: bool, show_skip: bool) -> None:
+    def __init__(self, title: str, *, show_reveal: bool) -> None:
         super().__init__(title)
         self.show_reveal = show_reveal
-        self.show_skip = show_skip
 
         self.alert_after = _seconds_spin()
         self.reveal_after = _seconds_spin()
         self.action_after = _seconds_spin()
         self.action = _action_combo()
-        self.skip_answer = QCheckBox("Start counting on question side")
 
         layout = QFormLayout(self)
         layout.addRow("Play alert after", self.alert_after)
@@ -83,8 +81,6 @@ class _PhaseGroup(QGroupBox):
             layout.addRow("Show answer after", self.reveal_after)
         layout.addRow("Automatically", self.action)
         layout.addRow("after", self.action_after)
-        if show_skip:
-            layout.addRow("", self.skip_answer)
 
     def load(self, data: dict[str, Any]) -> None:
         auto_action = data.get("autoAction", {})
@@ -93,7 +89,6 @@ class _PhaseGroup(QGroupBox):
         self.action_after.setValue(float(auto_action.get("after", 0.0) or 0.0))
         index = self.action.findData(auto_action.get("action", "again"))
         self.action.setCurrentIndex(max(0, index))
-        self.skip_answer.setChecked(bool(auto_action.get("skipAnswer", False)))
 
     def dump(self) -> dict[str, Any]:
         data: dict[str, Any] = {
@@ -105,8 +100,6 @@ class _PhaseGroup(QGroupBox):
         }
         if self.show_reveal:
             data["revealAfter"] = round(self.reveal_after.value(), 1)
-        if self.show_skip:
-            data["autoAction"]["skipAnswer"] = self.skip_answer.isChecked()
         return data
 
 
@@ -114,10 +107,8 @@ class _ClassTab(QWidget):
     def __init__(self, card_class: str) -> None:
         super().__init__()
         self.card_class = card_class
-        self.question = _PhaseGroup(
-            "Question", show_reveal=True, show_skip=True
-        )
-        self.answer = _PhaseGroup("Answer", show_reveal=False, show_skip=False)
+        self.question = _PhaseGroup("Question", show_reveal=True)
+        self.answer = _PhaseGroup("Answer", show_reveal=False)
         layout = QVBoxLayout(self)
         layout.addWidget(self.question)
         layout.addWidget(self.answer)

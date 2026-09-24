@@ -65,15 +65,6 @@
     return select;
   }
 
-  function makeCheckbox(value, onChange) {
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    input.className = "form-check-input";
-    input.checked = !!value;
-    input.addEventListener("change", () => onChange(input.checked));
-    return input;
-  }
-
   function row(labelText, control) {
     const wrapper = document.createElement("div");
     wrapper.className = "d-flex align-items-center gap-2 mb-1";
@@ -101,7 +92,6 @@
     const revealAfter = makeNumber(0, () => commit());
     const questionActionAfter = makeNumber(0, () => commit());
     const questionAction = makeSelect("again", () => commit());
-    const skipAnswer = makeCheckbox(false, () => commit());
 
     el.appendChild(row("Play alert after", alertAfter));
     el.appendChild(row("Show answer after", revealAfter));
@@ -116,7 +106,6 @@
     questionActionRow.appendChild(afterLabel);
     questionActionRow.appendChild(questionActionAfter);
     el.appendChild(questionActionRow);
-    el.appendChild(row("Start counting on question side", skipAnswer));
 
     const answerHeading = document.createElement("h4");
     answerHeading.textContent = "Answer";
@@ -159,7 +148,6 @@
           autoAction: {
             after: parseFloat(questionActionAfter.value) || 0,
             action: questionAction.value,
-            skipAnswer: skipAnswer.checked,
           },
         },
         answer: {
@@ -189,7 +177,6 @@
       revealAfter.value = question.revealAfter || 0;
       questionActionAfter.value = (question.autoAction || {}).after || 0;
       questionAction.value = (question.autoAction || {}).action || "again";
-      skipAnswer.checked = !!(question.autoAction || {}).skipAnswer;
       answerAlertAfter.value = answer.alertAfter || 0;
       answerActionAfter.value = (answer.autoAction || {}).after || 0;
       answerAction.value = (answer.autoAction || {}).action || "good";

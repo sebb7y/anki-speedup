@@ -14,6 +14,7 @@ effective_settings = schema.effective_settings
 has_any_timer = schema.has_any_timer
 recommend_settings = schema.recommend_settings
 scale_times = schema.scale_times
+apply_adaptive = schema.apply_adaptive
 
 
 def test_deep_merge_preserves_untouched_keys():
@@ -68,3 +69,13 @@ def test_recommend_settings():
     assert rec["question"]["revealAfter"] == 3.0
     assert rec["question"]["alertAfter"] == 2.5
     assert rec["answer"]["autoAction"]["after"] == 4.0
+
+
+def test_apply_adaptive_replaces_enabled_timers():
+    settings = effective_settings(default_global_settings(), {}, 2)
+    settings["question"]["revealAfter"] = 10.0
+    settings["answer"]["autoAction"]["after"] = 10.0
+    adaptive = apply_adaptive(settings, 4.0, 5.0, factor=0.5, floor=1.0)
+    assert adaptive["question"]["revealAfter"] == 2.0
+    assert adaptive["answer"]["autoAction"]["after"] == 2.5
+    assert adaptive["question"]["alertAfter"] == 0.0

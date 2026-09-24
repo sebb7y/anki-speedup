@@ -41,8 +41,8 @@ EASE_FOR_ACTION: dict[str, int] = {
 }
 
 
-def _default_auto_action(*, skip_answer: bool = False) -> dict[str, Any]:
-    return {"after": 0.0, "action": "again", "skipAnswer": skip_answer}
+def _default_auto_action(action: str = "again") -> dict[str, Any]:
+    return {"after": 0.0, "action": action}
 
 
 def default_class_settings() -> dict[str, Any]:
@@ -50,11 +50,11 @@ def default_class_settings() -> dict[str, Any]:
         "question": {
             "alertAfter": 0.0,
             "revealAfter": 0.0,
-            "autoAction": _default_auto_action(skip_answer=False),
+            "autoAction": _default_auto_action("again"),
         },
         "answer": {
             "alertAfter": 0.0,
-            "autoAction": _default_auto_action(),
+            "autoAction": _default_auto_action("good"),
         },
     }
 
@@ -195,10 +195,44 @@ def recommend_settings(
         "question": {
             "alertAfter": alert,
             "revealAfter": reveal,
-            "autoAction": {"after": 0.0, "action": "again", "skipAnswer": False},
+            "autoAction": {"after": 0.0, "action": "again"},
         },
         "answer": {
             "alertAfter": 0.0,
             "autoAction": {"after": back_action, "action": "good"},
         },
     }
+
+
+def apply_adaptive(
+    settings: dict[str, Any],
+    avg_front_s: float,
+    avg_back_s: float,
+    *,
+    factor: float,
+    floor: float,
+) -> dict[str, Any]:
+    """Replace enabled timers with values derived from recent averages."""
+    result = deepcopy(settings)
+    total_s = (avg_front_s or 0.0) + (avg_back_s or 0.0)
+
+    def target(avg: float) -> float:
+        if avg <= 0:
+            return 0.0
+        return max(floor, round(avg * factor, 2))
+
+    question = result["question"]
+    answer = result["answer"]
+
+    if question.get("revealAfter", 0) > 0 and avg_front_s > 0:
+        question["revealAfter"] = target(avg_front_s)
+    if question.get("alertAfter", 0) > 0 and avg_front_s > 0:
+        question["alertAfter"] = max(floor, round(avg_front_s * factor * 0.8, 2))
+    if question.get("autoAction", {}).get("after", 0) > 0 and total_s > 0:
+        question["autoAction"]["after"] = target(total_s)
+    if answer.get("alertAfter", 0) > 0 and avg_back_s > 0:
+        answer["alertAfter"] = max(floor, round(avg_back_s * factor * 0.8, 2))
+    if answer.get("autoAction", {}).get("after", 0) > 0 and avg_back_s > 0:
+        answer["autoAction"]["after"] = target(avg_back_s)
+
+    return result
