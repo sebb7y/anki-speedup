@@ -62,7 +62,9 @@
         "showAverage": false,
         "showDeckTotal": false,
         "showOverallTotal": false,
-        "totalPeriod": "today"
+        "totalPeriod": "today",
+        "overlayPosition": "top-right",
+        "overlayFontSize": 12
     },
     "analytics": {
         "enabled": false,

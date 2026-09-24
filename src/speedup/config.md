@@ -64,8 +64,11 @@ A value of `0` disables that timer.
 ### `ui`
 
 - `showCountdown`, `showAverage`, `showDeckTotal`, `showOverallTotal`
-  (true/false): which values to display in the reviewer bottom bar.
+  (true/false): which values to display in the reviewer overlay.
 - `totalPeriod`: `today` or `all`.
+- `overlayPosition`: where the reviewer overlay is anchored —
+  `top-right`, `top-left`, `bottom-right` or `bottom-left`.
+- `overlayFontSize`: overlay text size in pixels (8–48).
 
 ### `analytics`
 

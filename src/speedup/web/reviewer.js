@@ -42,8 +42,43 @@
   function chip() {
     return (
       "display:inline-block;padding:1px 6px;margin-top:2px;border-radius:4px;" +
-      "background:rgba(128,128,128,0.18);font-size:12px;line-height:1.5;"
+      "background:rgba(128,128,128,0.18);line-height:1.5;"
     );
+  }
+
+  function positionStyles() {
+    return {
+      "top-right": "top:10px;right:14px;text-align:right;",
+      "top-left": "top:10px;left:14px;text-align:left;",
+      "bottom-right": "bottom:10px;right:14px;text-align:right;",
+      "bottom-left": "bottom:10px;left:14px;text-align:left;",
+    };
+  }
+
+  function applyStyle() {
+    const overlay = document.getElementById("speedupOverlay");
+    if (!overlay) {
+      return;
+    }
+    const styles = positionStyles();
+    const position = styles[window.speedupOverlayPosition]
+      ? window.speedupOverlayPosition
+      : "top-right";
+    const size = parseInt(window.speedupOverlayFontSize, 10) || 12;
+    overlay.setAttribute(
+      "style",
+      "position:fixed;z-index:99999;pointer-events:none;max-width:40vw;" +
+        styles[position] +
+        "font-size:" +
+        size +
+        "px;"
+    );
+  }
+
+  function configure(position, fontSize) {
+    window.speedupOverlayPosition = position;
+    window.speedupOverlayFontSize = fontSize;
+    applyStyle();
   }
 
   function timeNode() {
@@ -119,11 +154,7 @@
     }
     const overlay = document.createElement("div");
     overlay.id = "speedupOverlay";
-    overlay.setAttribute(
-      "style",
-      "position:fixed;top:10px;right:14px;z-index:99999;text-align:right;" +
-        "pointer-events:none;max-width:40vw;"
-    );
+    overlay.setAttribute("style", "position:fixed;pointer-events:none;");
 
     const hotkey = window.speedupHotkey || "";
     const button = document.createElement("button");
@@ -152,6 +183,7 @@
     overlay.appendChild(time);
     overlay.appendChild(stats);
     document.body.appendChild(overlay);
+    applyStyle();
   }
 
   window.speedupBuild = build;
@@ -159,6 +191,7 @@
   window.speedupSetIdle = setIdle;
   window.speedupSetStats = setStats;
   window.speedupSetMoreTimeVisible = setMoreTimeVisible;
+  window.speedupConfigure = configure;
 
   build();
 })();

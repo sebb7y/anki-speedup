@@ -239,8 +239,25 @@ class SpeedupOptionsDialog(QDialog):
         index = self.total_period.findData(ui.get("totalPeriod", "today"))
         self.total_period.setCurrentIndex(max(0, index))
 
+        self.overlay_position = QComboBox()
+        self.overlay_position.addItem("Top right", "top-right")
+        self.overlay_position.addItem("Top left", "top-left")
+        self.overlay_position.addItem("Bottom right", "bottom-right")
+        self.overlay_position.addItem("Bottom left", "bottom-left")
+        position_index = self.overlay_position.findData(
+            ui.get("overlayPosition", "top-right")
+        )
+        self.overlay_position.setCurrentIndex(max(0, position_index))
+
+        self.overlay_font_size = QSpinBox()
+        self.overlay_font_size.setRange(8, 48)
+        self.overlay_font_size.setSuffix(" px")
+        self.overlay_font_size.setValue(int(ui.get("overlayFontSize", 12)))
+
         form = QFormLayout()
         form.addRow("Total time period", self.total_period)
+        form.addRow("Overlay position", self.overlay_position)
+        form.addRow("Overlay text size", self.overlay_font_size)
 
         layout.addWidget(self.show_countdown)
         layout.addWidget(self.show_average)
@@ -336,6 +353,8 @@ class SpeedupOptionsDialog(QDialog):
             "showDeckTotal": self.show_deck_total.isChecked(),
             "showOverallTotal": self.show_overall_total.isChecked(),
             "totalPeriod": self.total_period.currentData(),
+            "overlayPosition": self.overlay_position.currentData(),
+            "overlayFontSize": self.overlay_font_size.value(),
         }
         config["analytics"] = {
             "enabled": self.analytics_enabled.isChecked(),

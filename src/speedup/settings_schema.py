@@ -77,6 +77,8 @@ def default_global_settings() -> dict[str, Any]:
             "showDeckTotal": False,
             "showOverallTotal": False,
             "totalPeriod": "today",
+            "overlayPosition": "top-right",
+            "overlayFontSize": 12,
         },
         "analytics": {
             "enabled": False,

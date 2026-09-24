@@ -234,6 +234,13 @@ def _start_question(card: Card) -> None:
     _session.phase_start = time.monotonic()
 
     _eval("if (window.speedupBuild) speedupBuild();")
+    ui = config.get("ui", {})
+    position = ui.get("overlayPosition", "top-right")
+    font_size = int(ui.get("overlayFontSize", 12))
+    _eval(
+        "if (window.speedupConfigure) "
+        f"speedupConfigure({json.dumps(position)}, {font_size});"
+    )
     _push_stats(_session.deck_id, card)
 
     if not has_any_timer(settings):
@@ -356,14 +363,21 @@ def _on_js_message(
 
 
 def _on_webview_will_set_content(web_content: Any, context: Any) -> None:
-    hotkey = get_config().get("moreTime", {}).get("hotkey", "p")
+    config = get_config()
+    hotkey = config.get("moreTime", {}).get("hotkey", "p")
+    ui = config.get("ui", {})
+    position = ui.get("overlayPosition", "top-right")
+    font_size = int(ui.get("overlayFontSize", 12))
     if isinstance(context, Reviewer):
         web_content.body += (
             f"<script>window.speedupHotkey = {json.dumps(hotkey)};"
+            f"window.speedupOverlayPosition = {json.dumps(position)};"
+            f"window.speedupOverlayFontSize = {font_size};"
             "window.speedupSetIdle = window.speedupSetIdle || function(){};"
             "window.speedupSetStats = window.speedupSetStats || function(){};"
             "window.speedupSetCountdown = window.speedupSetCountdown || function(){};"
             "window.speedupSetMoreTimeVisible = window.speedupSetMoreTimeVisible || function(){};"
+            "window.speedupConfigure = window.speedupConfigure || function(){};"
             "</script>"
             f'<script src="/_addons/{MODULE_ADDON}/web/reviewer.js"></script>'
             f'<script src="/_addons/{MODULE_ADDON}/web/reviewer_card.js"></script>'
