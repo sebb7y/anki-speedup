@@ -119,6 +119,6 @@ def show_stats_for_current_deck() -> None:
 
 
 def initialize_stats() -> None:
-    action = QAction("Speedup statistics…")
+    action = QAction("Speedup statistics…", mw)
     qconnect(action.triggered, show_stats_for_current_deck)
     mw.form.menuTools.addAction(action)

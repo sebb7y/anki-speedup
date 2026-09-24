@@ -21,7 +21,7 @@ _initialized = False
 
 
 def _add_tools_menu() -> None:
-    action = QAction("Speedup options…")
+    action = QAction("Speedup options…", mw)
     qconnect(action.triggered, show_options_dialog)
     mw.form.menuTools.addAction(action)
 
