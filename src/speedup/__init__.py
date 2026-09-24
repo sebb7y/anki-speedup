@@ -11,6 +11,7 @@ from aqt import gui_hooks, mw
 
 from .config_manager import initialize_config
 from .consts import MODULE_ADDON
+from .deck_options import initialize_deck_options
 from .options_dialog import show_options_dialog
 
 _initialized = False
@@ -23,6 +24,7 @@ def initialize_addon() -> None:
 
     initialize_config()
     mw.addonManager.setConfigAction(MODULE_ADDON, show_options_dialog)
+    initialize_deck_options()
 
     _initialized = True
 
