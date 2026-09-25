@@ -53,6 +53,7 @@ class _Session:
     phase_start: float = 0.0
     front_ms: int = 0
     deck_id: int = 0
+    card_deck_id: int = 0
     card_type: int = 0
     auto_answering: bool = False
 
@@ -202,6 +203,23 @@ def _do_action(action: str) -> None:
         reviewer._answerCard(ease)
 
 
+def _reviewed_deck_id(fallback: int) -> int:
+    """The deck the user is currently studying, which may be a parent deck.
+
+    A card may live in a subdeck (e.g. "JP Vocab::Mining") while the user
+    reviews its parent ("JP Vocab"); stats should reflect the reviewed deck.
+    """
+    if mw.col is None:
+        return fallback
+    try:
+        deck = mw.col.decks.current()
+    except Exception:
+        return fallback
+    if deck and deck.get("id"):
+        return int(deck["id"])
+    return fallback
+
+
 def _settings_for_card(card: Card) -> dict[str, Any]:
     config = get_config()
     deck_id = int(card.current_deck_id())
@@ -228,7 +246,8 @@ def _start_question(card: Card) -> None:
     settings = _settings_for_card(card)
 
     _session.settings = settings
-    _session.deck_id = int(card.current_deck_id())
+    _session.card_deck_id = int(card.current_deck_id())
+    _session.deck_id = _reviewed_deck_id(_session.card_deck_id)
     _session.card_type = int(card.type)
     _session.phase = "question"
     _session.phase_start = time.monotonic()
@@ -324,7 +343,7 @@ def _on_answer_card(reviewer: Reviewer, card: Card, ease: int) -> None:
         try:
             store.record(
                 cid=int(card.id),
-                did=_session.deck_id,
+                did=_session.card_deck_id,
                 front_ms=_session.front_ms,
                 back_ms=back_ms,
                 ease=int(ease),
