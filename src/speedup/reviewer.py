@@ -147,7 +147,9 @@ def _push_stats(deck_id: int, card: Card | None = None) -> None:
         "badge": None,
     }
     if ui.get("showAverage"):
-        average = queries.deck_average_ms(deck_id, period="all")
+        average = queries.deck_average_ms(
+            deck_id, period=ui.get("averagePeriod", "today")
+        )
         if average:
             stats["average"] = average / 1000.0
     if ui.get("showDeckTotal"):

@@ -12,6 +12,8 @@ from collections.abc import Sequence
 
 from aqt import mw
 
+_EXCLUDE_TYPES = "type NOT IN (4, 5)"
+
 
 def _deck_ids(deck_id: int) -> list[int]:
     if mw.col is None:
@@ -46,7 +48,7 @@ def deck_average_ms(
     sql = (
         "SELECT AVG(time) FROM revlog WHERE "
         + _deck_clause(deck_ids)
-        + " AND id >= ?"
+        + f" AND id >= ? AND {_EXCLUDE_TYPES}"
     )
     value = mw.col.db.scalar(sql, *deck_ids, cutoff)
     if value is None:
@@ -62,7 +64,7 @@ def deck_total_ms(deck_id: int, *, period: str = "today") -> int:
     sql = (
         "SELECT SUM(time) FROM revlog WHERE "
         + _deck_clause(deck_ids)
-        + " AND id >= ?"
+        + f" AND id >= ? AND {_EXCLUDE_TYPES}"
     )
     value = mw.col.db.scalar(sql, *deck_ids, cutoff)
     return int(value or 0)
@@ -70,7 +72,10 @@ def deck_total_ms(deck_id: int, *, period: str = "today") -> int:
 
 def overall_total_ms(*, period: str = "today") -> int:
     cutoff = _cutoff_ms(period)
-    value = mw.col.db.scalar("SELECT SUM(time) FROM revlog WHERE id >= ?", cutoff)
+    value = mw.col.db.scalar(
+        f"SELECT SUM(time) FROM revlog WHERE id >= ? AND {_EXCLUDE_TYPES}",
+        cutoff,
+    )
     return int(value or 0)
 
 
@@ -85,7 +90,7 @@ def card_average_map(
     sql = (
         "SELECT cid, AVG(time) AS avg_time FROM revlog WHERE "
         + _deck_clause(deck_ids)
-        + " AND id >= ? GROUP BY cid"
+        + f" AND id >= ? AND {_EXCLUDE_TYPES} GROUP BY cid"
     )
     rows = mw.col.db.all(sql, *deck_ids, cutoff)
     return {int(row[0]): float(row[1]) for row in rows if row[1] is not None}

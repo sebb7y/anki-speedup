@@ -239,6 +239,12 @@ class SpeedupOptionsDialog(QDialog):
         index = self.total_period.findData(ui.get("totalPeriod", "today"))
         self.total_period.setCurrentIndex(max(0, index))
 
+        self.average_period = QComboBox()
+        self.average_period.addItem("Today", "today")
+        self.average_period.addItem("All time", "all")
+        average_index = self.average_period.findData(ui.get("averagePeriod", "today"))
+        self.average_period.setCurrentIndex(max(0, average_index))
+
         self.overlay_position = QComboBox()
         self.overlay_position.addItem("Top right", "top-right")
         self.overlay_position.addItem("Top left", "top-left")
@@ -256,6 +262,7 @@ class SpeedupOptionsDialog(QDialog):
 
         form = QFormLayout()
         form.addRow("Total time period", self.total_period)
+        form.addRow("Average time period", self.average_period)
         form.addRow("Overlay position", self.overlay_position)
         form.addRow("Overlay text size", self.overlay_font_size)
 
@@ -353,6 +360,7 @@ class SpeedupOptionsDialog(QDialog):
             "showDeckTotal": self.show_deck_total.isChecked(),
             "showOverallTotal": self.show_overall_total.isChecked(),
             "totalPeriod": self.total_period.currentData(),
+            "averagePeriod": self.average_period.currentData(),
             "overlayPosition": self.overlay_position.currentData(),
             "overlayFontSize": self.overlay_font_size.value(),
         }

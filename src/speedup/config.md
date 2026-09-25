@@ -65,7 +65,10 @@ A value of `0` disables that timer.
 
 - `showCountdown`, `showAverage`, `showDeckTotal`, `showOverallTotal`
   (true/false): which values to display in the reviewer overlay.
-- `totalPeriod`: `today` or `all`.
+- `totalPeriod`: `today` or `all` — applies to the deck/overall totals.
+- `averagePeriod`: `today` or `all` — applies to the average time per card.
+  `today` matches Anki's "studied today" figure (scoped to the deck you are
+  reviewing).
 - `overlayPosition`: where the reviewer overlay is anchored —
   `top-right`, `top-left`, `bottom-right` or `bottom-left`.
 - `overlayFontSize`: overlay text size in pixels (8–48).
