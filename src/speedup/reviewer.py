@@ -222,9 +222,14 @@ def _reviewed_deck_id(fallback: int) -> int:
     return fallback
 
 
-def _settings_for_card(card: Card) -> dict[str, Any]:
+def _settings_for_card(card: Card, deck_id: int) -> dict[str, Any]:
+    """Resolve timings from the preset of the deck currently being reviewed.
+
+    Using the reviewed deck (rather than the card's own subdeck) means a
+    parent deck's settings also govern reviews/custom study sessions that
+    pull in cards from its subdecks.
+    """
     config = get_config()
-    deck_id = int(card.current_deck_id())
     override = get_deck_override(deck_id)
     settings = effective_settings(config, override, card.type)
 
@@ -245,11 +250,12 @@ def _settings_for_card(card: Card) -> dict[str, Any]:
 def _start_question(card: Card) -> None:
     _session.reset()
     config = get_config()
-    settings = _settings_for_card(card)
 
-    _session.settings = settings
     _session.card_deck_id = int(card.current_deck_id())
     _session.deck_id = _reviewed_deck_id(_session.card_deck_id)
+    settings = _settings_for_card(card, _session.deck_id)
+
+    _session.settings = settings
     _session.card_type = int(card.type)
     _session.phase = "question"
     _session.phase_start = time.monotonic()

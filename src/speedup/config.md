@@ -7,6 +7,12 @@ Speedup has two layers of settings:
 - **Per-deck settings**: overrides that live inside Anki's deck options screen
   (see the "Speedup" section there). These are stored per deck-config preset.
 
+Per-deck timings are resolved from the **deck you are currently reviewing**
+(which may be a parent deck), not the individual card's subdeck. So a parent
+deck's settings also apply to reviews and custom study sessions that pull in
+cards from its subdecks. A custom study / filtered deck has no preset of its
+own, so it falls back to the global defaults.
+
 Timings are in seconds and may be fractional, e.g. `2.7`.
 
 ### `enabled`
