@@ -1,30 +1,55 @@
 # Anki Speedup
 
-## Warning: WIP & Still very buggy
-
+[![Status](https://img.shields.io/badge/status-WIP-yellow?style=flat-square)](#status)
+[![AI](https://img.shields.io/badge/AI-assisted-red?style=flat-square)](#development)
+[![Code quality](https://img.shields.io/badge/code_quality-poor-orange?style=flat-square)](#status)
 
 A modern reimplementation of [Speed Focus Mode](https://github.com/glutanimate/speed-focus-mode)
 for current Anki versions (built against Anki 26.09).
 
-Speedup keeps you moving by running granular, per-card timers during review:
+Speedup keeps you moving by running granular, per-card timers during review,
+with optional local analytics for timing recommendations.
 
-- Play an alert sound after a configurable, **fractional** number of seconds.
-- Automatically reveal the answer.
-- Automatically rate/bury the card.
-- Show a live countdown with a "More time" button/hotkey.
-- Use **different timings for new, learning, review and relearning** cards
-  (optionally collapsed into two classes).
-- Display average time per card, deck totals and overall totals.
-- Opt-in per-card front/back analytics, slow/fast marking, adaptive speed-up and
-  distribution charts.
+## Status
+
+WIP and still buggy. The timer engine, per-class timings, countdown and
+more-time controls are the stable core. Analytics, slow/fast badges,
+recommendations and adaptive speed-up are newer and should be treated as
+experimental.
+
+Known limitations:
+
+- Analytics only covers reviews recorded after it is enabled.
+- Per-deck overrides live inside Anki's deck-config presets, so they follow the
+  deck rather than the add-on config.
+- The statistics dialog needs local analytics data for the per-card charts;
+  the deck/overall totals still come from Anki's revlog.
+
+## Features
+
+- Per-card question timers: alert, reveal and auto-rate/bury.
+- Answer-side timers: alert and auto-rate.
+- Four settings classes: new, learning, review and relearning, with optional
+  collapsing into New/Review.
+- Countdown overlay with a clickable stop control.
+- Optional "More time" button and a configurable reviewer hotkey.
+- Stop timers while typing a type-in answer.
+- Suppress Anki's built-in Auto Advance while Speedup timers are active.
+- Per-deck overrides in the deck options screen.
+- Local, opt-in analytics with slow/fast marking, a statistics dialog and
+  timing recommendations.
 
 ## Settings
 
-- **Global settings**: click the add-on's *Config* button (or Tools → Add-ons →
-  Speedup → Config). Documented in [`src/speedup/config.md`](src/speedup/config.md).
+- **Global settings**: click the add-on's *Config* button, or open
+  **Tools → Speedup → Options…**. Documented in
+  [`src/speedup/config.md`](src/speedup/config.md).
 - **Per-deck settings**: open a deck's options screen; Speedup adds its own
   section. Per-deck values override the global defaults and are stored with the
   deck's config preset.
+- **Statistics**: **Tools → Speedup → Statistics…**, or the deck browser's
+  right-click menu. If analytics is off, the dialog offers a one-click way to
+  enable it.
 
 ## Development
 
@@ -39,8 +64,8 @@ make lint     # ruff (+ mypy)
 
 Restart Anki after `make link`. Use `make unlink` to remove the symlink.
 
-The pure logic (settings merging, card classification, recommendations) lives in
-`settings_schema.py` and is unit tested without Anki.
+The pure logic (settings normalization/merging, card classification,
+recommendations) lives in `settings_schema.py` and is unit tested without Anki.
 
 ## License
 

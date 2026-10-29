@@ -2,8 +2,9 @@
 
 Speedup has two layers of settings:
 
-- **Global settings** (this file / the dialog opened from the add-on's *Config*
-  button): behaviour and the default timings for each card class.
+- **Global settings** (this file, the add-on's *Config* button, or
+  **Tools → Speedup → Options…**): behaviour and the default timings for each
+  card class.
 - **Per-deck settings**: overrides that live inside Anki's deck options screen
   (see the "Speedup" section there). These are stored per deck-config preset.
 
@@ -21,8 +22,8 @@ Timings are in seconds and may be fractional, e.g. `2.7`.
 
 ### `moreTime.showButton`
 
-(true/false): Show the "More time" button and countdown in the reviewer.
-Default: `false`.
+(true/false): Show the "More time" button in the reviewer. The countdown chip
+is always clickable, and the hotkey always works. Default: `false`.
 
 ### `moreTime.hotkey`
 
@@ -42,7 +43,8 @@ active for the current card, to avoid two systems firing at once. Default:
 ### `alertSound`
 
 (text): `default` uses the bundled sound. Any other value is treated as a
-filename inside the add-on's `user_files` folder. Default: `default`.
+filename inside the add-on's `user_files` folder. The Options dialog lists
+sound files in that folder and can test them. Default: `default`.
 
 ### `grouping`
 
@@ -58,9 +60,8 @@ Per card class (`new`, `learning`, `review`, `relearning`). Each class has a
 
 - `question.alertAfter`: play the alert sound after this many seconds.
 - `question.revealAfter`: reveal the answer after this many seconds.
-- `question.autoAction`: `{ after, action, skipAnswer }` — automatically perform
-  `action` (`again`/`hard`/`good`/`easy`/`bury`) after `after` seconds. When
-  `skipAnswer` is true the countdown starts on the question side.
+- `question.autoAction`: `{ after, action }` — automatically perform `action`
+  (`again`/`hard`/`good`/`easy`/`bury`) after `after` seconds.
 - `answer.alertAfter`: play the alert sound after the answer is shown.
 - `answer.autoAction`: `{ after, action }` — automatically perform `action`
   after `after` seconds on the answer side.
@@ -81,12 +82,17 @@ A value of `0` disables that timer.
 
 ### `analytics`
 
+**Experimental.** Open **Tools → Speedup → Statistics…** (or a deck's
+right-click menu) to view the charts and recommendations.
+
 - `enabled` (true/false): opt in to recording per-card front/back times in a
   local database (`user_files/speedup.db`). This data is not synced.
 - `markSlowFast` (true/false): highlight slow/fast cards in the reviewer.
 - `slowPercentile` / `fastPercentile`: thresholds for slow/fast classification.
 
 ### `adaptive`
+
+**Experimental.** Requires `analytics.enabled`.
 
 - `enabled` (true/false): gradually tighten timers based on your recent
   averages.

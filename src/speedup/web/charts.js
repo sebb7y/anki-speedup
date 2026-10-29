@@ -49,11 +49,32 @@
       .join("");
   }
 
+  function renderAnalyticsBanner() {
+    const node = document.getElementById("analytics-banner");
+    if (!node) {
+      return;
+    }
+    if (data.analyticsEnabled) {
+      node.hidden = true;
+      return;
+    }
+    node.hidden = false;
+    node.innerHTML =
+      '<span class="muted">Per-card analytics is off, so the charts and ' +
+      "recommendations below have no data yet.</span>";
+    const button = document.createElement("button");
+    button.textContent = "Enable analytics";
+    button.addEventListener("click", () => {
+      pycmd("speedup-enable-analytics");
+    });
+    node.appendChild(button);
+  }
+
   function renderRecommendation() {
     const node = document.getElementById("recommend");
     if (!data.recommendation) {
       node.innerHTML =
-        '<span class="muted">Enable analytics to get recommended timings.</span>';
+        '<span class="muted">No timing data yet. Review some cards with analytics enabled.</span>';
       return;
     }
     const recommendation = data.recommendation;
@@ -189,6 +210,7 @@
 
   document.getElementById("deck-name").textContent =
     data.deckName || "Deck statistics";
+  renderAnalyticsBanner();
   renderSummary();
   renderRecommendation();
   renderCharts();

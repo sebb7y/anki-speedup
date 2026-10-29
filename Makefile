@@ -23,7 +23,7 @@ test:
 
 lint:
 	@python3 -m ruff check src tests scripts
-	@python3 -m mypy src/speedup || true
+	@python3 -m mypy src/speedup
 
 format:
 	@python3 -m ruff format src tests scripts

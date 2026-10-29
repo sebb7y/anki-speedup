@@ -40,6 +40,15 @@ EASE_FOR_ACTION: dict[str, int] = {
     "easy": 4,
 }
 
+OVERLAY_POSITIONS: tuple[str, ...] = (
+    "top-right",
+    "top-left",
+    "bottom-right",
+    "bottom-left",
+)
+
+PERIODS: tuple[str, ...] = ("today", "all")
+
 
 def _default_auto_action(action: str = "again") -> dict[str, Any]:
     return {"after": 0.0, "action": action}
@@ -109,6 +118,131 @@ def deep_merge(base: dict[str, Any], override: dict[str, Any] | None) -> dict[st
     return result
 
 
+def _as_dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _as_bool(value: Any, default: bool) -> bool:
+    return value if isinstance(value, bool) else default
+
+
+def _as_number(value: Any, default: float = 0.0, minimum: float = 0.0) -> float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return default
+    return max(minimum, number)
+
+
+def _as_int(value: Any, default: int, minimum: int, maximum: int) -> int:
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return default
+    return min(maximum, max(minimum, number))
+
+
+def _as_float(value: Any, default: float, minimum: float, maximum: float) -> float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return default
+    return min(maximum, max(minimum, number))
+
+
+def _as_choice(value: Any, choices: tuple[str, ...], default: str) -> str:
+    return value if value in choices else default
+
+
+def _as_action(value: Any, default: str) -> str:
+    return value if value in ACTIONS else default
+
+
+def normalize_class_settings(raw: dict[str, Any] | None) -> dict[str, Any]:
+    """Return a complete, type-safe class settings dict."""
+    raw = _as_dict(raw)
+    question = _as_dict(raw.get("question"))
+    answer = _as_dict(raw.get("answer"))
+    question_action = _as_dict(question.get("autoAction"))
+    answer_action = _as_dict(answer.get("autoAction"))
+
+    return {
+        "question": {
+            "alertAfter": _as_number(question.get("alertAfter")),
+            "revealAfter": _as_number(question.get("revealAfter")),
+            "autoAction": {
+                "after": _as_number(question_action.get("after")),
+                "action": _as_action(question_action.get("action"), "again"),
+            },
+        },
+        "answer": {
+            "alertAfter": _as_number(answer.get("alertAfter")),
+            "autoAction": {
+                "after": _as_number(answer_action.get("after")),
+                "action": _as_action(answer_action.get("action"), "good"),
+            },
+        },
+    }
+
+
+def normalize_global_settings(raw: dict[str, Any] | None) -> dict[str, Any]:
+    """Merge raw user config on top of the defaults and sanitize every value."""
+    merged = deep_merge(default_global_settings(), _as_dict(raw))
+
+    more_time = _as_dict(merged.get("moreTime"))
+    grouping = _as_dict(merged.get("grouping"))
+    ui = _as_dict(merged.get("ui"))
+    analytics = _as_dict(merged.get("analytics"))
+    adaptive = _as_dict(merged.get("adaptive"))
+    defaults = _as_dict(merged.get("defaults"))
+
+    hotkey = str(more_time.get("hotkey") or "p").strip() or "p"
+    alert_sound = str(merged.get("alertSound") or "default").strip() or "default"
+
+    return {
+        "enabled": _as_bool(merged.get("enabled"), True),
+        "moreTime": {
+            "showButton": _as_bool(more_time.get("showButton"), False),
+            "hotkey": hotkey,
+        },
+        "stopTimersWhenTyping": _as_bool(merged.get("stopTimersWhenTyping"), True),
+        "suppressBuiltInAutoAdvance": _as_bool(merged.get("suppressBuiltInAutoAdvance"), True),
+        "alertSound": alert_sound,
+        "grouping": {
+            "collapseNewLearning": _as_bool(grouping.get("collapseNewLearning"), False),
+            "collapseReviewRelearning": _as_bool(grouping.get("collapseReviewRelearning"), False),
+        },
+        "defaults": {
+            card_class: normalize_class_settings(defaults.get(card_class))
+            for card_class in CARD_CLASSES
+        },
+        "ui": {
+            "showCountdown": _as_bool(ui.get("showCountdown"), True),
+            "showAverage": _as_bool(ui.get("showAverage"), False),
+            "showDeckTotal": _as_bool(ui.get("showDeckTotal"), False),
+            "showOverallTotal": _as_bool(ui.get("showOverallTotal"), False),
+            "totalPeriod": _as_choice(ui.get("totalPeriod"), PERIODS, "today"),
+            "averagePeriod": _as_choice(ui.get("averagePeriod"), PERIODS, "today"),
+            "overlayPosition": _as_choice(
+                ui.get("overlayPosition"), OVERLAY_POSITIONS, "top-right"
+            ),
+            "overlayFontSize": _as_int(ui.get("overlayFontSize"), 12, 8, 48),
+        },
+        "analytics": {
+            "enabled": _as_bool(analytics.get("enabled"), False),
+            "markSlowFast": _as_bool(analytics.get("markSlowFast"), False),
+            "slowPercentile": _as_int(analytics.get("slowPercentile"), 75, 50, 99),
+            "fastPercentile": _as_int(analytics.get("fastPercentile"), 25, 1, 50),
+        },
+        "adaptive": {
+            "enabled": _as_bool(adaptive.get("enabled"), False),
+            "factor": _as_float(adaptive.get("factor"), 0.97, 0.5, 1.0),
+            "windowDays": _as_int(adaptive.get("windowDays"), 30, 1, 365),
+            "floor": _as_number(adaptive.get("floor"), 1.0),
+        },
+    }
+
+
 def card_class_for(card_type: int, grouping: dict[str, Any] | None = None) -> str:
     """Map an Anki card type to a (possibly collapsed) settings class."""
     card_class = CARD_TYPE_TO_CLASS.get(int(card_type), "review")
@@ -130,24 +264,29 @@ def effective_settings(
     card_class = card_class_for(card_type, grouping)
 
     defaults = global_config.get("defaults", {})
-    base = defaults.get(card_class) or default_class_settings()
+    base = normalize_class_settings(defaults.get(card_class))
 
     override = (deck_override or {}).get(card_class)
-    merged = deep_merge(base, override)
+    merged = normalize_class_settings(deep_merge(base, override))
 
-    enabled = (deck_override or {}).get("enabled", global_config.get("enabled", True))
-    merged["enabled"] = bool(enabled)
+    # The global switch is a true master switch: a deck override may disable
+    # timers for its preset, but it may not re-enable them globally.
+    global_enabled = bool(global_config.get("enabled", True))
+    deck_enabled = bool((deck_override or {}).get("enabled", True))
+    merged["enabled"] = global_enabled and deck_enabled
     merged["cardClass"] = card_class
     return merged
 
 
 def _after_values(settings: dict[str, Any]) -> list[float]:
+    question = settings.get("question", {})
+    answer = settings.get("answer", {})
     values = [
-        settings.get("question", {}).get("alertAfter", 0.0),
-        settings.get("question", {}).get("revealAfter", 0.0),
-        settings.get("question", {}).get("autoAction", {}).get("after", 0.0),
-        settings.get("answer", {}).get("alertAfter", 0.0),
-        settings.get("answer", {}).get("autoAction", {}).get("after", 0.0),
+        question.get("alertAfter", 0.0),
+        question.get("revealAfter", 0.0),
+        question.get("autoAction", {}).get("after", 0.0),
+        answer.get("alertAfter", 0.0),
+        answer.get("autoAction", {}).get("after", 0.0),
     ]
     return [float(v or 0.0) for v in values]
 
@@ -156,28 +295,6 @@ def has_any_timer(settings: dict[str, Any]) -> bool:
     if not settings.get("enabled", True):
         return False
     return any(value > 0 for value in _after_values(settings))
-
-
-def scale_times(settings: dict[str, Any], factor: float, floor: float = 0.0) -> dict[str, Any]:
-    """Return settings with every ``after`` value multiplied and floored."""
-    scaled = deepcopy(settings)
-
-    def scale(value: Any) -> float:
-        value = float(value or 0.0)
-        if value <= 0:
-            return 0.0
-        return max(floor, round(value * factor, 2))
-
-    scaled["question"]["alertAfter"] = scale(scaled["question"].get("alertAfter", 0.0))
-    scaled["question"]["revealAfter"] = scale(scaled["question"].get("revealAfter", 0.0))
-    scaled["question"]["autoAction"]["after"] = scale(
-        scaled["question"].get("autoAction", {}).get("after", 0.0)
-    )
-    scaled["answer"]["alertAfter"] = scale(scaled["answer"].get("alertAfter", 0.0))
-    scaled["answer"]["autoAction"]["after"] = scale(
-        scaled["answer"].get("autoAction", {}).get("after", 0.0)
-    )
-    return scaled
 
 
 def recommend_settings(
@@ -216,7 +333,7 @@ def apply_adaptive(
     floor: float,
 ) -> dict[str, Any]:
     """Replace enabled timers with values derived from recent averages."""
-    result = deepcopy(settings)
+    result = normalize_class_settings(settings)
     total_s = (avg_front_s or 0.0) + (avg_back_s or 0.0)
 
     def target(avg: float) -> float:

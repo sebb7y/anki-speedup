@@ -12,15 +12,20 @@ from typing import Any, Callable
 from aqt import mw
 
 from .consts import CONFIG_NAMESPACE, MODULE_ADDON
-from .settings_schema import deep_merge, default_global_settings
+from .settings_schema import normalize_global_settings
 
-_config: dict[str, Any] = default_global_settings()
+_config: dict[str, Any] = normalize_global_settings(None)
 
 _listeners: list[Callable[[], None]] = []
 
 
 def _normalize(raw: dict[str, Any] | None) -> dict[str, Any]:
-    return deep_merge(default_global_settings(), raw or {})
+    return normalize_global_settings(raw)
+
+
+def _notify() -> None:
+    for callback in _listeners:
+        callback()
 
 
 def load_config() -> dict[str, Any]:
@@ -37,6 +42,7 @@ def save_config(config: dict[str, Any]) -> None:
     global _config
     _config = _normalize(config)
     mw.addonManager.writeConfig(MODULE_ADDON, _config)
+    _notify()
 
 
 def add_config_listener(callback: Callable[[], None]) -> None:
@@ -45,8 +51,7 @@ def add_config_listener(callback: Callable[[], None]) -> None:
 
 def _on_config_updated(*_args: Any) -> None:
     load_config()
-    for callback in _listeners:
-        callback()
+    _notify()
 
 
 def initialize_config() -> None:
@@ -58,14 +63,10 @@ def get_deck_override(deck_id: int) -> dict[str, Any]:
     """Return this add-on's namespaced overrides for a deck's config preset."""
     if mw.col is None:
         return {}
-    deck_config = mw.col.decks.config_dict_for_deck_id(deck_id)
-    override = deck_config.get(CONFIG_NAMESPACE)
-    if isinstance(override, dict):
-        return override
-    return {}
-
-
-def get_deck_override_for_config(deck_config: dict[str, Any]) -> dict[str, Any]:
+    try:
+        deck_config = mw.col.decks.config_dict_for_deck_id(deck_id)
+    except Exception:
+        return {}
     override = deck_config.get(CONFIG_NAMESPACE)
     if isinstance(override, dict):
         return override

@@ -12,7 +12,7 @@
   window.speedupTypeListenerInstalled = true;
 
   document.addEventListener(
-    "keyup",
+    "input",
     function (event) {
       const target = event.target;
       if (target && target.id === "typeans") {

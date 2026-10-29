@@ -36,17 +36,17 @@ def on_deck_options_did_load(dialog: DeckOptionsDialog) -> None:
 
 
 def on_deck_browser_will_show_options_menu(menu: QMenu, deck_id: int) -> None:
-    options_action = QAction("Speedup options…", menu)
+    options_action = QAction("Speedup settings…", menu)
+    options_action.setToolTip("Open this deck's options and edit its Speedup section.")
     qconnect(options_action.triggered, lambda: display_options_for_deck_id(deck_id))
     menu.addAction(options_action)
 
     stats_action = QAction("Speedup statistics…", menu)
+    stats_action.setToolTip("View local analytics for this deck.")
     qconnect(stats_action.triggered, lambda: show_stats_for_deck(deck_id))
     menu.addAction(stats_action)
 
 
 def initialize_deck_options() -> None:
     gui_hooks.deck_options_did_load.append(on_deck_options_did_load)
-    gui_hooks.deck_browser_will_show_options_menu.append(
-        on_deck_browser_will_show_options_menu
-    )
+    gui_hooks.deck_browser_will_show_options_menu.append(on_deck_browser_will_show_options_menu)

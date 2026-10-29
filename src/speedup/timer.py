@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Callable
 
 from aqt import mw
-from aqt.qt import QTimer
+from aqt.qt import Qt, QTimer
 
 
 class TimerGroup:
@@ -22,6 +22,7 @@ class TimerGroup:
     def schedule(self, milliseconds: float, callback: Callable[[], None]) -> QTimer:
         timer = QTimer(mw)
         timer.setSingleShot(True)
+        timer.setTimerType(Qt.TimerType.PreciseTimer)
         timer.timeout.connect(callback)
         timer.start(max(1, int(round(milliseconds))))
         self._timers.append(timer)

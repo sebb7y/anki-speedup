@@ -8,15 +8,21 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
 from aqt import mw
-from aqt.qt import QAction, QDialog, QVBoxLayout, QWidget, qconnect
+from aqt.qt import QDialog, QVBoxLayout, QWidget
 from aqt.utils import disable_help_button, restoreGeom, saveGeom, tooltip
 from aqt.webview import AnkiWebView
 
-from ..config_manager import get_deck_override, set_deck_override
+from ..config_manager import (
+    get_config,
+    get_deck_override,
+    save_config,
+    set_deck_override,
+)
 from ..consts import PATH_WEB
 from ..settings_schema import CARD_CLASSES, deep_merge, recommend_settings
 from . import queries, store
@@ -49,8 +55,9 @@ class StatsDialog(QDialog):
         cards = store.card_stats(self.deck_id, WINDOW_DAYS)
         totals = [card["total"] for card in cards]
         recommendation = None
-        if averages:
-            recommendation = recommend_settings(avg_front / 1000.0, avg_back / 1000.0)
+        if averages is not None:
+            front, back = averages
+            recommendation = recommend_settings(front / 1000.0, back / 1000.0)
         return {
             "deckId": self.deck_id,
             "deckName": (deck or {}).get("name", "Deck"),
@@ -62,18 +69,34 @@ class StatsDialog(QDialog):
             "distribution": store.distribution(self.deck_id, WINDOW_DAYS),
             "slowThresholdMs": queries.percentile(totals, 0.75) if totals else None,
             "fastThresholdMs": queries.percentile(totals, 0.25) if totals else None,
+            "analyticsEnabled": bool(get_config().get("analytics", {}).get("enabled")),
+            "windowDays": WINDOW_DAYS,
         }
 
     def _render(self) -> None:
         data = self._collect()
         html = (Path(PATH_WEB) / "charts.html").read_text(encoding="utf-8")
-        html = html.replace("__DATA__", json.dumps(data))
+        payload = json.dumps(data).replace("<", "\\u003c")
+        html = html.replace("__DATA__", payload)
         self.web.stdHtml(html)
 
     def _on_bridge(self, url: Any) -> None:
-        if isinstance(url, str) and url.startswith("speedup-apply:"):
+        if not isinstance(url, str):
+            return
+        if url.startswith("speedup-apply:"):
             payload = json.loads(url.split(":", 1)[1])
             self._apply(payload)
+        elif url == "speedup-enable-analytics":
+            self._enable_analytics()
+
+    def _enable_analytics(self) -> None:
+        config = deepcopy(get_config())
+        analytics = dict(config.get("analytics", {}))
+        analytics["enabled"] = True
+        config["analytics"] = analytics
+        save_config(config)
+        tooltip("Analytics enabled. Review a few cards to collect data.")
+        self._render()
 
     def _apply(self, recommendation: dict[str, Any]) -> None:
         question = recommendation.get("question", {})
@@ -116,9 +139,5 @@ def show_stats_for_current_deck() -> None:
     deck = mw.col.decks.current()
     if deck:
         show_stats_for_deck(deck["id"])
-
-
-def initialize_stats() -> None:
-    action = QAction("Speedup statistics…", mw)
-    qconnect(action.triggered, show_stats_for_current_deck)
-    mw.form.menuTools.addAction(action)
+    else:
+        tooltip("Open a deck first.")

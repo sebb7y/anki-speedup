@@ -38,9 +38,7 @@ def _deck_clause(deck_ids: Sequence[int]) -> str:
     return f"cid IN (SELECT id FROM cards WHERE did IN ({placeholders}))"
 
 
-def deck_average_ms(
-    deck_id: int, *, period: str = "all", days: int | None = None
-) -> float | None:
+def deck_average_ms(deck_id: int, *, period: str = "all", days: int | None = None) -> float | None:
     deck_ids = _deck_ids(deck_id)
     if not deck_ids:
         return None
@@ -77,23 +75,6 @@ def overall_total_ms(*, period: str = "today") -> int:
         cutoff,
     )
     return int(value or 0)
-
-
-def card_average_map(
-    deck_id: int, *, days: int | None = None
-) -> dict[int, float]:
-    """Map of cid -> average total answer time (ms) for a deck."""
-    deck_ids = _deck_ids(deck_id)
-    if not deck_ids:
-        return {}
-    cutoff = _window_cutoff_ms(days)
-    sql = (
-        "SELECT cid, AVG(time) AS avg_time FROM revlog WHERE "
-        + _deck_clause(deck_ids)
-        + f" AND id >= ? AND {_EXCLUDE_TYPES} GROUP BY cid"
-    )
-    rows = mw.col.db.all(sql, *deck_ids, cutoff)
-    return {int(row[0]): float(row[1]) for row in rows if row[1] is not None}
 
 
 def percentile(values: Sequence[float], fraction: float) -> float | None:

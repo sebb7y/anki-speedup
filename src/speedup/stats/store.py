@@ -15,6 +15,8 @@ from __future__ import annotations
 import os
 import sqlite3
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 
 from ..consts import PATH_USERFILES
@@ -39,12 +41,17 @@ CREATE INDEX IF NOT EXISTS idx_card_times_ts ON card_times (ts);
 """
 
 
-def _connect() -> sqlite3.Connection:
+@contextmanager
+def _connect() -> Iterator[sqlite3.Connection]:
     os.makedirs(PATH_USERFILES, exist_ok=True)
     connection = sqlite3.connect(_DB_PATH)
-    connection.row_factory = sqlite3.Row
-    connection.executescript(_SCHEMA)
-    return connection
+    try:
+        connection.row_factory = sqlite3.Row
+        connection.executescript(_SCHEMA)
+        yield connection
+        connection.commit()
+    finally:
+        connection.close()
 
 
 def record(
@@ -105,17 +112,6 @@ def deck_averages(did: int, days: int | None = None) -> tuple[float, float] | No
     return float(row["front"] or 0.0), float(row["back"] or 0.0)
 
 
-def card_totals(did: int, days: int | None = None) -> dict[int, int]:
-    """Map of cid -> average total time (ms) for a deck."""
-    with _connect() as connection:
-        rows = connection.execute(
-            "SELECT cid, AVG(total_ms) AS total FROM card_times"
-            " WHERE did = ? AND ts >= ? GROUP BY cid",
-            (int(did), _since(days)),
-        ).fetchall()
-    return {int(row["cid"]): int(row["total"] or 0) for row in rows}
-
-
 def card_stats(did: int, days: int | None = None) -> list[dict[str, Any]]:
     """Per-card average front/back/total times for a deck."""
     with _connect() as connection:
@@ -141,8 +137,7 @@ def distribution(did: int, days: int | None = None) -> dict[str, list[int]]:
     """Front/back/total answer times (ms) for charts."""
     with _connect() as connection:
         rows = connection.execute(
-            "SELECT front_ms, back_ms, total_ms FROM card_times"
-            " WHERE did = ? AND ts >= ?",
+            "SELECT front_ms, back_ms, total_ms FROM card_times WHERE did = ? AND ts >= ?",
             (int(did), _since(days)),
         ).fetchall()
     return {
@@ -150,16 +145,3 @@ def distribution(did: int, days: int | None = None) -> dict[str, list[int]]:
         "back": [int(row["back_ms"]) for row in rows],
         "total": [int(row["total_ms"]) for row in rows],
     }
-
-
-def stats() -> dict[str, Any]:
-    with _connect() as connection:
-        row = connection.execute(
-            "SELECT COUNT(*) AS n, AVG(total_ms) AS avg FROM card_times"
-        ).fetchone()
-    return {"count": int(row["n"] or 0), "average_ms": float(row["avg"] or 0.0)}
-
-
-def clear() -> None:
-    with _connect() as connection:
-        connection.execute("DELETE FROM card_times")

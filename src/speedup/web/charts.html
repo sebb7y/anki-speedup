@@ -23,11 +23,21 @@
       .badge { padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.8rem; }
       .badge.slow { background: #f8d7da; color: #842029; }
       .badge.fast { background: #d1e7dd; color: #0f5132; }
+      .banner {
+        margin-top: 0.75rem;
+        padding: 0.6rem 0.8rem;
+        border: 1px solid rgba(127, 127, 127, 0.3);
+        border-radius: 6px;
+        background: rgba(127, 127, 127, 0.08);
+      }
+      .banner[hidden] { display: none; }
+      .banner button { margin-left: 0.6rem; }
     </style>
   </head>
   <body>
     <div id="speedup-stats">
       <h1 id="deck-name"></h1>
+      <div id="analytics-banner" class="banner" hidden></div>
       <div id="summary" class="summary"></div>
       <div id="recommend" style="margin-top: 1rem"></div>
       <h2>Card speed distribution</h2>

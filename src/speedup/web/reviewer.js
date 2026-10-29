@@ -39,10 +39,11 @@
     return minutes + ":" + String(seconds).padStart(2, "0");
   }
 
-  function chip() {
+  function chip(extra) {
     return (
       "display:inline-block;padding:1px 6px;margin-top:2px;border-radius:4px;" +
-      "background:rgba(128,128,128,0.18);line-height:1.5;"
+      "background:rgba(128,128,128,0.18);line-height:1.5;" +
+      (extra || "")
     );
   }
 
@@ -105,6 +106,10 @@
     if (rafHandle !== null) {
       cancelAnimationFrame(rafHandle);
     }
+    const node = timeNode();
+    if (node) {
+      node.style.display = "";
+    }
     tick();
   }
 
@@ -117,6 +122,7 @@
     const node = timeNode();
     if (node) {
       node.textContent = text || "";
+      node.style.display = text ? "" : "none";
     }
   }
 
@@ -139,6 +145,7 @@
       parts.push(stats.badge);
     }
     node.textContent = parts.join("  ·  ");
+    node.style.display = parts.length ? "" : "none";
   }
 
   function setMoreTimeVisible(visible) {
@@ -148,15 +155,19 @@
     }
   }
 
+  function stopTimers() {
+    pycmd("speedup:moreTime");
+  }
+
   function build() {
     if (document.getElementById("speedupOverlay")) {
       return;
     }
+    const hotkey = window.speedupHotkey || "";
     const overlay = document.createElement("div");
     overlay.id = "speedupOverlay";
     overlay.setAttribute("style", "position:fixed;pointer-events:none;");
 
-    const hotkey = window.speedupHotkey || "";
     const button = document.createElement("button");
     button.id = "speedupMoreTime";
     button.textContent = "More time!";
@@ -167,17 +178,22 @@
       "style",
       "pointer-events:auto;display:none;margin-bottom:2px;"
     );
-    button.addEventListener("click", function () {
-      pycmd("speedup:moreTime");
-    });
+    button.addEventListener("click", stopTimers);
 
     const time = document.createElement("div");
     time.id = "speedupTime";
-    time.setAttribute("style", chip());
+    time.setAttribute(
+      "style",
+      chip("pointer-events:auto;cursor:pointer;display:none;")
+    );
+    time.title = hotkey
+      ? "Click to stop timers (" + hotkey + ")"
+      : "Click to stop timers";
+    time.addEventListener("click", stopTimers);
 
     const stats = document.createElement("div");
     stats.id = "speedupStats";
-    stats.setAttribute("style", chip());
+    stats.setAttribute("style", chip("display:none;"));
 
     overlay.appendChild(button);
     overlay.appendChild(time);

@@ -11,6 +11,7 @@ import json
 import os
 import time
 from dataclasses import dataclass, field
+from functools import partial
 from typing import Any, Callable
 
 from anki.cards import Card
@@ -19,7 +20,11 @@ from aqt.reviewer import Reviewer
 from aqt.sound import av_player
 from aqt.utils import tooltip
 
-from .config_manager import get_config, get_deck_override
+from .config_manager import (
+    add_config_listener,
+    get_config,
+    get_deck_override,
+)
 from .consts import (
     DEFAULT_ALERT_NAME,
     MODULE_ADDON,
@@ -36,6 +41,8 @@ from .settings_schema import (
 )
 from .stats import queries, store
 from .timer import TimerGroup
+
+_THRESHOLD_CACHE_SECONDS = 60.0
 
 
 @dataclass
@@ -56,6 +63,7 @@ class _Session:
     card_deck_id: int = 0
     card_type: int = 0
     auto_answering: bool = False
+    auto_advance_previous: bool | None = None
 
     def reset(self) -> None:
         self.timers.clear()
@@ -64,11 +72,33 @@ class _Session:
         self.phase = "idle"
         self.auto_answering = False
         self.front_ms = 0
+        self.auto_advance_previous = None
 
 
 _session = _Session()
 
-_percentile_cache: dict[int, tuple[float | None, float | None]] = {}
+# (deck, window, slow percentile, fast percentile) -> (timestamp, slow, fast)
+_threshold_cache: dict[tuple[int, int, float, float], tuple[float, float | None, float | None]] = {}
+
+
+def _invalidate_caches() -> None:
+    _threshold_cache.clear()
+
+
+def _suppress_auto_advance() -> None:
+    reviewer = mw.reviewer
+    if reviewer is None:
+        return
+    if _session.auto_advance_previous is None:
+        _session.auto_advance_previous = bool(getattr(reviewer, "auto_advance_enabled", False))
+    reviewer.auto_advance_enabled = False
+
+
+def _restore_auto_advance() -> None:
+    reviewer = mw.reviewer
+    if reviewer is not None and _session.auto_advance_previous is not None:
+        reviewer.auto_advance_enabled = _session.auto_advance_previous
+    _session.auto_advance_previous = None
 
 
 def _alert_path() -> str:
@@ -87,13 +117,26 @@ def _eval(js: str) -> None:
     web = getattr(reviewer, "web", None)
     if web is None:
         return
-    web.eval(js)
+    try:
+        web.eval(js)
+    except Exception:
+        # The reviewer webview may be tearing down while a timer fires.
+        pass
+
+
+def _push_overlay_config() -> None:
+    ui = get_config().get("ui", {})
+    position = json.dumps(ui.get("overlayPosition", "top-right"))
+    font_size = int(ui.get("overlayFontSize", 12))
+    _eval(f"if (window.speedupConfigure) speedupConfigure({position}, {font_size});")
 
 
 def _push_next_countdown() -> None:
-    if not get_config().get("ui", {}).get("showCountdown", True):
-        return
     if not _session.events:
+        _eval('speedupSetIdle("");')
+        _eval("speedupSetMoreTimeVisible(false);")
+        return
+    if not get_config().get("ui", {}).get("showCountdown", True):
         _eval('speedupSetIdle("");')
         return
     event = min(_session.events, key=lambda item: item.deadline)
@@ -117,22 +160,29 @@ def _schedule(seconds: float, label: str, callback: Callable[[], None]) -> None:
 def _cancel_timers(idle_text: str = "") -> None:
     _session.timers.clear()
     _session.events.clear()
-    _eval(f"speedupSetIdle({json.dumps(idle_text)});")
+    _eval(f"speedupSetIdle({json.dumps(idle_text)});speedupSetMoreTimeVisible(false);")
 
 
 def _deck_thresholds(
     deck_id: int, days: int, slow_percentile: float, fast_percentile: float
 ) -> tuple[float | None, float | None]:
-    cached = _percentile_cache.get(deck_id)
-    if cached is not None:
-        return cached
-    averages = queries.card_average_map(deck_id, days=days)
-    values = [value for value in averages.values() if value]
+    """Slow/fast thresholds from the local analytics database.
+
+    The same source is used for per-card badges and per-card averages so the
+    numbers stay consistent even when Anki's revlog has no front/back split.
+    """
+    key = (int(deck_id), int(days), float(slow_percentile), float(fast_percentile))
+    now = time.monotonic()
+    cached = _threshold_cache.get(key)
+    if cached is not None and now - cached[0] < _THRESHOLD_CACHE_SECONDS:
+        return cached[1], cached[2]
+
+    cards = store.card_stats(int(deck_id), int(days))
+    values = [float(card["total"]) for card in cards if card["total"] > 0]
     slow = queries.percentile(values, slow_percentile / 100.0) if values else None
     fast = queries.percentile(values, fast_percentile / 100.0) if values else None
-    result = (slow, fast)
-    _percentile_cache[deck_id] = result
-    return result
+    _threshold_cache[key] = (now, slow, fast)
+    return slow, fast
 
 
 def _push_stats(deck_id: int, card: Card | None = None) -> None:
@@ -146,30 +196,34 @@ def _push_stats(deck_id: int, card: Card | None = None) -> None:
         "overallTotal": None,
         "badge": None,
     }
-    if ui.get("showAverage"):
-        average = queries.deck_average_ms(
-            deck_id, period=ui.get("averagePeriod", "today")
-        )
-        if average:
-            stats["average"] = average / 1000.0
-    if ui.get("showDeckTotal"):
-        stats["deckTotal"] = queries.deck_total_ms(deck_id, period=period) / 1000.0
-    if ui.get("showOverallTotal"):
-        stats["overallTotal"] = queries.overall_total_ms(period=period) / 1000.0
-    if analytics.get("enabled") and analytics.get("markSlowFast") and card is not None:
-        averages = store.card_averages(int(card.id), 30)
-        if averages:
-            total = averages[0] + averages[1]
-            slow, fast = _deck_thresholds(
-                deck_id,
-                30,
-                float(analytics.get("slowPercentile", 75)),
-                float(analytics.get("fastPercentile", 25)),
-            )
-            if slow is not None and total >= slow:
-                stats["badge"] = "slow"
-            elif fast is not None and total <= fast:
-                stats["badge"] = "fast"
+
+    try:
+        if ui.get("showAverage"):
+            average = queries.deck_average_ms(deck_id, period=ui.get("averagePeriod", "today"))
+            if average is not None:
+                stats["average"] = average / 1000.0
+        if ui.get("showDeckTotal"):
+            stats["deckTotal"] = queries.deck_total_ms(deck_id, period=period) / 1000.0
+        if ui.get("showOverallTotal"):
+            stats["overallTotal"] = queries.overall_total_ms(period=period) / 1000.0
+        if analytics.get("enabled") and analytics.get("markSlowFast") and card is not None:
+            averages = store.card_averages(int(card.id), 30)
+            if averages:
+                total = averages[0] + averages[1]
+                slow, fast = _deck_thresholds(
+                    deck_id,
+                    30,
+                    float(analytics.get("slowPercentile", 75)),
+                    float(analytics.get("fastPercentile", 25)),
+                )
+                if slow is not None and total >= slow:
+                    stats["badge"] = "slow"
+                elif fast is not None and total <= fast:
+                    stats["badge"] = "fast"
+    except Exception:
+        # Stats are decorative; never let a query failure break review.
+        pass
+
     _eval(f"speedupSetStats({json.dumps(stats)});")
 
 
@@ -193,6 +247,9 @@ def _do_action(action: str) -> None:
     if reviewer is None or reviewer.card is None:
         return
     if action == "bury":
+        _session.timers.clear()
+        _session.events.clear()
+        _restore_auto_advance()
         reviewer.bury_current_card()
         return
     ease = EASE_FOR_ACTION.get(action)
@@ -237,17 +294,21 @@ def _settings_for_card(card: Card, deck_id: int) -> dict[str, Any]:
     if settings.get("enabled") and adaptive.get("enabled"):
         averages = store.deck_averages(deck_id, adaptive.get("windowDays", 30))
         if averages:
-            settings = apply_adaptive(
+            adapted = apply_adaptive(
                 settings,
                 averages[0] / 1000.0,
                 averages[1] / 1000.0,
                 factor=float(adaptive.get("factor", 0.97)),
                 floor=float(adaptive.get("floor", 1.0)),
             )
+            adapted["enabled"] = settings.get("enabled", True)
+            adapted["cardClass"] = settings.get("cardClass")
+            settings = adapted
     return settings
 
 
 def _start_question(card: Card) -> None:
+    _restore_auto_advance()
     _session.reset()
     config = get_config()
 
@@ -261,13 +322,7 @@ def _start_question(card: Card) -> None:
     _session.phase_start = time.monotonic()
 
     _eval("if (window.speedupBuild) speedupBuild();")
-    ui = config.get("ui", {})
-    position = ui.get("overlayPosition", "top-right")
-    font_size = int(ui.get("overlayFontSize", 12))
-    _eval(
-        "if (window.speedupConfigure) "
-        f"speedupConfigure({json.dumps(position)}, {font_size});"
-    )
+    _push_overlay_config()
     _push_stats(_session.deck_id, card)
 
     if not has_any_timer(settings):
@@ -275,8 +330,8 @@ def _start_question(card: Card) -> None:
         _eval('speedupSetIdle("");')
         return
 
-    if config.get("suppressBuiltInAutoAdvance", True) and mw.reviewer is not None:
-        mw.reviewer.auto_advance_enabled = False
+    if config.get("suppressBuiltInAutoAdvance", True):
+        _suppress_auto_advance()
 
     show_more = bool(config.get("moreTime", {}).get("showButton", False))
     _eval(f"speedupSetMoreTimeVisible({'true' if show_more else 'false'});")
@@ -292,7 +347,7 @@ def _start_question(card: Card) -> None:
         _schedule(
             float(auto_action["after"]),
             ACTION_LABELS.get(action, action),
-            lambda chosen=action: _do_action(chosen),
+            partial(_do_action, action),
         )
 
     _push_next_countdown()
@@ -326,7 +381,7 @@ def _start_answer(card: Card) -> None:
         _schedule(
             float(auto_action["after"]),
             ACTION_LABELS.get(action, action),
-            lambda chosen=action: _do_action(chosen),
+            partial(_do_action, action),
         )
 
     _push_next_countdown()
@@ -347,11 +402,14 @@ def _on_answer_card(reviewer: Reviewer, card: Card, ease: int) -> None:
     if _session.phase == "answer":
         back_ms = int((time.monotonic() - _session.phase_start) * 1000)
 
-    if get_config().get("analytics", {}).get("enabled") and card is not None:
+    analytics_enabled = bool(get_config().get("analytics", {}).get("enabled"))
+    if analytics_enabled and card is not None:
         try:
+            # Store the deck being reviewed, not the card's subdeck, so the
+            # per-deck statistics and adaptive timers agree with the overlay.
             store.record(
                 cid=int(card.id),
-                did=_session.card_deck_id,
+                did=_session.deck_id or _session.card_deck_id,
                 front_ms=_session.front_ms,
                 back_ms=back_ms,
                 ease=int(ease),
@@ -360,6 +418,7 @@ def _on_answer_card(reviewer: Reviewer, card: Card, ease: int) -> None:
         except Exception:
             pass
 
+    _restore_auto_advance()
     _session.timers.clear()
     _session.events.clear()
     _session.phase = "idle"
@@ -376,9 +435,7 @@ def _on_typeans() -> None:
         _cancel_timers("Stopped.")
 
 
-def _on_js_message(
-    handled: tuple[bool, Any], message: str, context: Any
-) -> tuple[bool, Any]:
+def _on_js_message(handled: tuple[bool, Any], message: str, context: Any) -> tuple[bool, Any]:
     if not isinstance(message, str) or not message.startswith(PYCMD_IDENTIFIER + ":"):
         return handled
     action = message.split(":", 1)[1]
@@ -396,7 +453,7 @@ def _on_webview_will_set_content(web_content: Any, context: Any) -> None:
     position = ui.get("overlayPosition", "top-right")
     font_size = int(ui.get("overlayFontSize", 12))
     if isinstance(context, Reviewer):
-        web_content.body += (
+        web_content.head += (
             f"<script>window.speedupHotkey = {json.dumps(hotkey)};"
             f"window.speedupOverlayPosition = {json.dumps(position)};"
             f"window.speedupOverlayFontSize = {font_size};"
@@ -406,13 +463,13 @@ def _on_webview_will_set_content(web_content: Any, context: Any) -> None:
             "window.speedupSetMoreTimeVisible = window.speedupSetMoreTimeVisible || function(){};"
             "window.speedupConfigure = window.speedupConfigure || function(){};"
             "</script>"
-            f'<script src="/_addons/{MODULE_ADDON}/web/reviewer.js"></script>'
-            f'<script src="/_addons/{MODULE_ADDON}/web/reviewer_card.js"></script>'
         )
+        web_content.js.append(f"/_addons/{MODULE_ADDON}/web/reviewer.js")
+        web_content.js.append(f"/_addons/{MODULE_ADDON}/web/reviewer_card.js")
 
 
 def _on_state_shortcuts_will_change(state: str, shortcuts: list[Any]) -> None:
-    if state != "review":
+    if state != "review" or not get_config().get("enabled", True):
         return
     hotkey = get_config().get("moreTime", {}).get("hotkey", "p")
     if hotkey:
@@ -420,16 +477,33 @@ def _on_state_shortcuts_will_change(state: str, shortcuts: list[Any]) -> None:
 
 
 def _on_reviewer_did_init(reviewer: Reviewer) -> None:
+    _restore_auto_advance()
     _session.reset()
+    _invalidate_caches()
 
 
 def _on_reviewer_will_end() -> None:
+    _restore_auto_advance()
     _cancel_timers("")
+    _invalidate_caches()
 
 
 def _on_dialog_manager_did_open_dialog(*args: Any, **kwargs: Any) -> None:
     if _session.events:
         _cancel_timers("Paused.")
+
+
+def _on_config_updated() -> None:
+    _invalidate_caches()
+    if get_config().get("suppressBuiltInAutoAdvance", True) and _session.events:
+        _suppress_auto_advance()
+    elif _session.auto_advance_previous is not None:
+        _restore_auto_advance()
+    _push_overlay_config()
+    reviewer = mw.reviewer
+    if reviewer is not None and reviewer.card is not None:
+        _push_stats(_session.deck_id, reviewer.card)
+        _push_next_countdown()
 
 
 def initialize_reviewer() -> None:
@@ -443,3 +517,4 @@ def initialize_reviewer() -> None:
     gui_hooks.webview_will_set_content.append(_on_webview_will_set_content)
     gui_hooks.webview_did_receive_js_message.append(_on_js_message)
     gui_hooks.dialog_manager_did_open_dialog.append(_on_dialog_manager_did_open_dialog)
+    add_config_listener(_on_config_updated)

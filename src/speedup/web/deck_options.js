@@ -137,6 +137,7 @@
         delete sp[key];
         return Object.assign({}, data, { speedup: sp });
       });
+      render({});
     });
     el.appendChild(reset);
 
@@ -191,6 +192,20 @@
     const enabled = document.getElementById("speedup-enabled");
     const grouping = GLOBAL.grouping || {};
 
+    const collapsed = [];
+    if (grouping.collapseNewLearning) {
+      collapsed.push("Learning uses the New timings");
+    }
+    if (grouping.collapseReviewRelearning) {
+      collapsed.push("Relearning uses the Review timings");
+    }
+    if (collapsed.length) {
+      const note = document.createElement("p");
+      note.className = "text-muted";
+      note.textContent = collapsed.join(". ") + ".";
+      container.appendChild(note);
+    }
+
     const sections = {};
     CLASSES.forEach((cardClass) => {
       if (cardClass.collapsedBy && grouping[cardClass.collapsedBy]) {
@@ -200,6 +215,9 @@
       sections[cardClass.key] = section;
       container.appendChild(section.el);
     });
+
+    enabled.checked = GLOBAL.enabled !== false;
+    Object.keys(sections).forEach((key) => sections[key].render({}));
 
     store.subscribe((data) => {
       const sp = data.speedup || {};

@@ -7,14 +7,15 @@ assert _spec and _spec.loader
 schema = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(schema)
 
+apply_adaptive = schema.apply_adaptive
 card_class_for = schema.card_class_for
 deep_merge = schema.deep_merge
 default_global_settings = schema.default_global_settings
 effective_settings = schema.effective_settings
 has_any_timer = schema.has_any_timer
+normalize_class_settings = schema.normalize_class_settings
+normalize_global_settings = schema.normalize_global_settings
 recommend_settings = schema.recommend_settings
-scale_times = schema.scale_times
-apply_adaptive = schema.apply_adaptive
 
 
 def test_deep_merge_preserves_untouched_keys():
@@ -47,6 +48,13 @@ def test_effective_settings_enabled_flag():
     assert effective_settings(config, {"enabled": False}, 2)["enabled"] is False
 
 
+def test_global_switch_cannot_be_overridden_by_deck():
+    config = default_global_settings()
+    config["enabled"] = False
+    override = {"enabled": True}
+    assert effective_settings(config, override, 2)["enabled"] is False
+
+
 def test_has_any_timer():
     settings = effective_settings(default_global_settings(), {}, 2)
     assert has_any_timer(settings) is False
@@ -54,14 +62,43 @@ def test_has_any_timer():
     assert has_any_timer(settings) is True
 
 
-def test_scale_times_respects_floor_and_zero():
-    settings = effective_settings(default_global_settings(), {}, 2)
-    settings["question"]["revealAfter"] = 10.0
-    settings["answer"]["autoAction"]["after"] = 5.0
-    scaled = scale_times(settings, factor=0.5, floor=4.0)
-    assert scaled["question"]["revealAfter"] == 5.0
-    assert scaled["answer"]["autoAction"]["after"] == 4.0
-    assert scaled["question"]["alertAfter"] == 0.0
+def test_normalize_class_settings_clamps_and_repairs_values():
+    raw = {
+        "question": {
+            "alertAfter": "-2",
+            "revealAfter": "not a number",
+            "autoAction": {"after": 3, "action": "nope"},
+        },
+        "answer": "bad",
+    }
+    normalized = normalize_class_settings(raw)
+    assert normalized["question"]["alertAfter"] == 0.0
+    assert normalized["question"]["revealAfter"] == 0.0
+    assert normalized["question"]["autoAction"] == {"after": 3.0, "action": "again"}
+    assert normalized["answer"]["autoAction"]["action"] == "good"
+
+
+def test_normalize_global_settings_keeps_values_in_range():
+    config = normalize_global_settings(
+        {
+            "ui": {"overlayFontSize": 999, "overlayPosition": "middle"},
+            "analytics": {"slowPercentile": 5, "fastPercentile": 99},
+            "adaptive": {"factor": 3.0, "windowDays": 0},
+        }
+    )
+    assert config["ui"]["overlayFontSize"] == 48
+    assert config["ui"]["overlayPosition"] == "top-right"
+    assert config["analytics"]["slowPercentile"] == 50
+    assert config["analytics"]["fastPercentile"] == 50
+    assert config["adaptive"]["factor"] == 1.0
+    assert config["adaptive"]["windowDays"] == 1
+
+
+def test_normalize_global_settings_uses_defaults_for_missing_data():
+    config = normalize_global_settings({"enabled": "false"})
+    assert config["enabled"] is True
+    assert config["moreTime"] == {"showButton": False, "hotkey": "p"}
+    assert set(config["defaults"]) == {"new", "learning", "review", "relearning"}
 
 
 def test_recommend_settings():
