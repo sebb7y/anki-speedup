@@ -94,6 +94,21 @@ def test_normalize_global_settings_keeps_values_in_range():
     assert config["adaptive"]["windowDays"] == 1
 
 
+def test_normalize_global_settings_clamps_custom_overlay_position():
+    config = normalize_global_settings(
+        {
+            "ui": {
+                "overlayPosition": "custom",
+                "overlayXPercent": 120,
+                "overlayYPercent": -5,
+            }
+        }
+    )
+    assert config["ui"]["overlayPosition"] == "custom"
+    assert config["ui"]["overlayXPercent"] == 100.0
+    assert config["ui"]["overlayYPercent"] == 0.0
+
+
 def test_normalize_global_settings_uses_defaults_for_missing_data():
     config = normalize_global_settings({"enabled": "false"})
     assert config["enabled"] is True

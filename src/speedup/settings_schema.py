@@ -45,6 +45,7 @@ OVERLAY_POSITIONS: tuple[str, ...] = (
     "top-left",
     "bottom-right",
     "bottom-left",
+    "custom",
 )
 
 PERIODS: tuple[str, ...] = ("today", "all")
@@ -89,6 +90,8 @@ def default_global_settings() -> dict[str, Any]:
             "averagePeriod": "today",
             "overlayPosition": "top-right",
             "overlayFontSize": 12,
+            "overlayXPercent": 70.0,
+            "overlayYPercent": 8.0,
         },
         "analytics": {
             "enabled": False,
@@ -227,6 +230,8 @@ def normalize_global_settings(raw: dict[str, Any] | None) -> dict[str, Any]:
                 ui.get("overlayPosition"), OVERLAY_POSITIONS, "top-right"
             ),
             "overlayFontSize": _as_int(ui.get("overlayFontSize"), 12, 8, 48),
+            "overlayXPercent": _as_float(ui.get("overlayXPercent"), 70.0, 0.0, 100.0),
+            "overlayYPercent": _as_float(ui.get("overlayYPercent"), 8.0, 0.0, 100.0),
         },
         "analytics": {
             "enabled": _as_bool(analytics.get("enabled"), False),

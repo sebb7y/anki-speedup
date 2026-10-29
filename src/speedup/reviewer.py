@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from copy import deepcopy
 from dataclasses import dataclass, field
 from functools import partial
 from typing import Any, Callable
@@ -24,6 +25,7 @@ from .config_manager import (
     add_config_listener,
     get_config,
     get_deck_override,
+    save_config,
 )
 from .consts import (
     DEFAULT_ALERT_NAME,
@@ -128,7 +130,25 @@ def _push_overlay_config() -> None:
     ui = get_config().get("ui", {})
     position = json.dumps(ui.get("overlayPosition", "top-right"))
     font_size = int(ui.get("overlayFontSize", 12))
-    _eval(f"if (window.speedupConfigure) speedupConfigure({position}, {font_size});")
+    x_percent = float(ui.get("overlayXPercent", 70.0))
+    y_percent = float(ui.get("overlayYPercent", 8.0))
+    _eval(
+        "if (window.speedupConfigure) "
+        f"speedupConfigure({position}, {font_size}, {x_percent}, {y_percent});"
+    )
+
+
+def _save_overlay_position(x_percent: float, y_percent: float) -> None:
+    """Persist a dragged overlay position as viewport percentages."""
+    x_percent = min(100.0, max(0.0, float(x_percent)))
+    y_percent = min(100.0, max(0.0, float(y_percent)))
+    config = deepcopy(get_config())
+    ui = dict(config.get("ui", {}))
+    ui["overlayPosition"] = "custom"
+    ui["overlayXPercent"] = round(x_percent, 2)
+    ui["overlayYPercent"] = round(y_percent, 2)
+    config["ui"] = ui
+    save_config(config)
 
 
 def _push_next_countdown() -> None:
@@ -439,7 +459,13 @@ def _on_js_message(handled: tuple[bool, Any], message: str, context: Any) -> tup
     if not isinstance(message, str) or not message.startswith(PYCMD_IDENTIFIER + ":"):
         return handled
     action = message.split(":", 1)[1]
-    if action == "moreTime":
+    if action.startswith("overlayMoved:"):
+        try:
+            payload = json.loads(action.split(":", 1)[1])
+            _save_overlay_position(float(payload["x"]), float(payload["y"]))
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+            pass
+    elif action == "moreTime":
         _on_more_time()
     elif action == "typeans":
         _on_typeans()
@@ -452,11 +478,15 @@ def _on_webview_will_set_content(web_content: Any, context: Any) -> None:
     ui = config.get("ui", {})
     position = ui.get("overlayPosition", "top-right")
     font_size = int(ui.get("overlayFontSize", 12))
+    x_percent = float(ui.get("overlayXPercent", 70.0))
+    y_percent = float(ui.get("overlayYPercent", 8.0))
     if isinstance(context, Reviewer):
         web_content.head += (
             f"<script>window.speedupHotkey = {json.dumps(hotkey)};"
             f"window.speedupOverlayPosition = {json.dumps(position)};"
             f"window.speedupOverlayFontSize = {font_size};"
+            f"window.speedupOverlayXPercent = {x_percent};"
+            f"window.speedupOverlayYPercent = {y_percent};"
             "window.speedupSetIdle = window.speedupSetIdle || function(){};"
             "window.speedupSetStats = window.speedupSetStats || function(){};"
             "window.speedupSetCountdown = window.speedupSetCountdown || function(){};"

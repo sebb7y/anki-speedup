@@ -65,7 +65,9 @@
         "totalPeriod": "today",
         "averagePeriod": "today",
         "overlayPosition": "top-right",
-        "overlayFontSize": 12
+        "overlayFontSize": 12,
+        "overlayXPercent": 70.0,
+        "overlayYPercent": 8.0
     },
     "analytics": {
         "enabled": false,

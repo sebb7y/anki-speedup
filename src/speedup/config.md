@@ -77,7 +77,10 @@ A value of `0` disables that timer.
   `today` matches Anki's "studied today" figure (scoped to the deck you are
   reviewing).
 - `overlayPosition`: where the reviewer overlay is anchored —
-  `top-right`, `top-left`, `bottom-right` or `bottom-left`.
+  `top-right`, `top-left`, `bottom-right`, `bottom-left`, or `custom`.
+- `overlayXPercent` / `overlayYPercent`: custom overlay position as a percentage
+  of the reviewer viewport (0–100). Used when `overlayPosition` is `custom`;
+  dragging the ⠿ handle in the reviewer updates these automatically.
 - `overlayFontSize`: overlay text size in pixels (8–48).
 
 ### `analytics`

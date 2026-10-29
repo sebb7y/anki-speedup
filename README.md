@@ -31,7 +31,8 @@ Known limitations:
 - Answer-side timers: alert and auto-rate.
 - Four settings classes: new, learning, review and relearning, with optional
   collapsing into New/Review.
-- Countdown overlay with a clickable stop control.
+- Movable countdown overlay with a clickable stop control; drag the ⠿ handle
+  to place it anywhere, and the position is remembered.
 - Optional "More time" button and a configurable reviewer hotkey.
 - Stop timers while typing a type-in answer.
 - Suppress Anki's built-in Auto Advance while Speedup timers are active.

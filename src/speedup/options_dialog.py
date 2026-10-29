@@ -304,6 +304,7 @@ class SpeedupOptionsDialog(QDialog):
         self.overlay_position.addItem("Top left", "top-left")
         self.overlay_position.addItem("Bottom right", "bottom-right")
         self.overlay_position.addItem("Bottom left", "bottom-left")
+        self.overlay_position.addItem("Custom (drag)", "custom")
 
         self.overlay_font_size = QSpinBox()
         self.overlay_font_size.setRange(8, 48)
@@ -315,11 +316,18 @@ class SpeedupOptionsDialog(QDialog):
         form.addRow("Overlay position", self.overlay_position)
         form.addRow("Overlay text size", self.overlay_font_size)
 
+        drag_note = QLabel(
+            "For a custom position, choose <b>Custom (drag)</b>, then drag the "
+            "⠿ handle on the reviewer overlay. The position is remembered."
+        )
+        drag_note.setWordWrap(True)
+
         layout.addWidget(self.show_countdown)
         layout.addWidget(self.show_average)
         layout.addWidget(self.show_deck_total)
         layout.addWidget(self.show_overall_total)
         layout.addLayout(form)
+        layout.addWidget(drag_note)
         layout.addStretch()
         return widget
 
@@ -483,6 +491,7 @@ class SpeedupOptionsDialog(QDialog):
 
     def result_config(self) -> dict[str, Any]:
         config = deepcopy(get_config())
+        current_ui = config.get("ui", {})
 
         config["enabled"] = self.enabled.isChecked()
         config["suppressBuiltInAutoAdvance"] = self.suppress_builtin.isChecked()
@@ -508,6 +517,8 @@ class SpeedupOptionsDialog(QDialog):
             "averagePeriod": self.average_period.currentData(),
             "overlayPosition": self.overlay_position.currentData(),
             "overlayFontSize": self.overlay_font_size.value(),
+            "overlayXPercent": float(current_ui.get("overlayXPercent", 70.0)),
+            "overlayYPercent": float(current_ui.get("overlayYPercent", 8.0)),
         }
         config["analytics"] = {
             "enabled": self.analytics_enabled.isChecked(),
