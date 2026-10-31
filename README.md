@@ -2,7 +2,7 @@
 
 [![Status](https://img.shields.io/badge/status-WIP-yellow?style=flat-square)](#status)
 [![AI](https://img.shields.io/badge/AI-assisted-red?style=flat-square)](#development)
-[![Code quality](https://img.shields.io/badge/code_quality-poor-orange?style=flat-square)](#status)
+[![Quality gate](https://img.shields.io/sonar/quality_gate/sebb7y_anki-speedup?server=https%3A%2F%2Fsonarcloud.io&style=flat-square)](https://sonarcloud.io/project/overview?id=sebb7y_anki-speedup)
 
 A modern reimplementation of [Speed Focus Mode](https://github.com/glutanimate/speed-focus-mode)
 for current Anki versions (built against Anki 26.09).
